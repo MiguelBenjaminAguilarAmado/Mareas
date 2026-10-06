@@ -19,6 +19,9 @@ Mareas es una aplicación web (PWA) para registrar cómo te sientes día a día 
 - **Escalas de 1 a 5** con niveles con nombre (dolor, energía, estrés, ansiedad, concentración, apetito o las que inventes).
 - **Título, notas, fotos y vídeos** en cada entrada.
 - **Búsqueda y filtros** por texto, ánimo, actividad o entradas con multimedia.
+- **Vista previa** al tocar una entrada, con todos sus datos y un botón para editarla.
+- **Fototeca** con todas las fotos y vídeos, por meses, con visor.
+- **Fotos desde un ZIP:** asigna las fotos de un .zip a las entradas del mismo día (útil tras importar desde Daylio).
 
 ### 📅 Calendario y estadísticas
 - Vista de **mes** y vista de **año** día a día, coloreadas según tu ánimo medio, con puntos de color para exámenes, entregas, tareas y clases puntuales pendientes. Al tocar un día ves sus clases, eventos y entradas de ánimo juntos.
@@ -39,8 +42,17 @@ Mareas es una aplicación web (PWA) para registrar cómo te sientes día a día 
 - **Nivel de estrés** estimado a partir de exámenes, entregas y tareas pendientes cruzados con tu ánimo: índice de hoy, previsión de 21 días, resumen por semanas, avisos de acumulación y comparación de tu ánimo en días cargados y tranquilos. Es una estimación orientativa, no un diagnóstico.
 - **Agenda** de tareas, exámenes, entregas y clases puntuales, con asignatura, fecha, hora, prioridad, estado de hecho y aviso. Vistas de pendientes, día y semana.
 
+### 🧠 Estado anímico y conexiones
+- **Estado anímico:** análisis de 7 días, 30 días o 3 meses con diagnóstico (nivel, tendencia, estabilidad, rachas bajas, escalas, carga escolar, día más bajo), avisos y pautas concretas para mejorar. Es orientativo, no un diagnóstico clínico.
+- **Acciones avanzadas → Conexiones:** vincula una acción (por ejemplo Amigos, también tras importar de Daylio) y, al elegirla en una entrada, se despliega la lista de personas con las que has estado ese día.
+- **Sub-acciones:** detalle derivado de una acción principal (Ejercicio → Correr, Gimnasio…).
+- **Personas:** menú aparte con estadísticas por persona y insights como «¡Estar con Mariano hace que estés un +12% más feliz!» (ánimo con y sin esa persona; muestra relación, no causa).
+
+### 📦 Mega-packs
+Un único archivo con TODO (entradas, personas, escalas, objetivos, agenda escolar, ajustes y fotos/vídeos). Se importa combinando con tus datos o reemplazándolo todo.
+
 ### 🎨 Apariencia
-Cuatro estilos visuales sobre el mismo código:
+Cinco estilos visuales sobre el mismo código, con diseño adaptado a móvil, tablet vertical y pantallas anchas (iPad horizontal y ordenador: barra lateral, dos columnas y ventanas centradas):
 
 | Estilo | Descripción |
 |---|---|
@@ -48,6 +60,7 @@ Cuatro estilos visuales sobre el mismo código:
 | **Minimalista** | Plano y muy rápido, sin efectos |
 | **Liquid Glass** | Cristal translúcido en azul cielo |
 | **Android** | Superficies tonales y esquinas suaves |
+| **Apple Silicon** | Negro puro, cristal esmerilado y gradientes líquidos (siempre oscuro) |
 
 Además hay tres paletas de ánimo (Marea, Semáforo, Pastel), nombres de nivel personalizables y modo claro/oscuro automático según el dispositivo.
 
@@ -55,19 +68,11 @@ Además hay tres paletas de ánimo (Marea, Semáforo, Pastel), nombres de nivel 
 
 - Todo se guarda en el navegador: `localStorage` para los datos y `IndexedDB` para fotos y vídeos, con una segunda copia interna de seguridad.
 - No se envía nada a ningún servidor.
+- **Notificaciones** opcionales (Pomodoro, recordatorio diario y agenda). Se piden con el permiso nativo del navegador y solo llegan con la app abierta o en segundo plano.
 - **Exportar:** copia JSON, CSV o copia completa con fotos y vídeos.
 - **Importar:** copias de Mareas y archivos CSV exportados desde **Daylio**.
 
 > ⚠️ Si borras los datos del sitio o cambias de dispositivo, se perderán. Descarga una copia de seguridad de vez en cuando.
-
-## 🚀 Publicar tu propia copia en GitHub Pages
-
-1. Haz un fork o crea un repositorio y sube a la raíz: `index.html`, `manifest.webmanifest`, `sw.js`, `icon-192.png` e `icon-512.png`.
-2. Ve a **Settings → Pages → Build and deployment → Deploy from a branch** y elige `main` / `(root)`.
-3. Abre `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. En el móvil, usa **«Añadir a pantalla de inicio»** para instalarla.
-
-Al estar en otra dirección web, los datos de una versión anterior no se traen solos: usa *Ajustes → Descargar copia completa* en la antigua y *Elegir archivo* en la nueva.
 
 ## 🛠️ Tecnología
 
@@ -75,11 +80,6 @@ Al estar en otra dirección web, los datos de una versión anterior no se traen 
 - Iconos SVG propios en un sprite único.
 - Service Worker con caché para funcionar sin conexión.
 - Web App Manifest para la instalación como app.
-
-## 🗺️ Próximamente
-
-- Importar calendarios `.ics` (Google Classroom, Moodle).
-- Sincronización entre dispositivos.
 
 ## 👤 Autor
 
