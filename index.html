@@ -537,6 +537,33 @@ textarea.field{min-height:96px;resize:vertical}
 }
 .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px;margin-bottom:6px}
 .pgrid .mth{width:100%;height:auto;aspect-ratio:1;border-radius:10px}
+
+/* command palette / quick search */
+#cmdPal{position:fixed;inset:0;z-index:60;display:none;align-items:flex-start;justify-content:center;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:min(70px,12vh) 16px 20px}
+#cmdPal.open{display:flex}
+.cmdbox{width:100%;max-width:540px;background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:0 18px 48px var(--glass-shadow);display:flex;flex-direction:column;overflow:hidden;max-height:80vh}
+[data-skin="glass"] .cmdbox{background:var(--glass-sheet);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border:1px solid var(--glass-edge)}
+.cmdtop{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.cmdtop input{flex:1;min-width:0;border:0;background:none;font-size:16px;outline:none;color:var(--fg)}
+.cmdtop kbd{background:var(--surface2);border:1px solid var(--line);padding:2px 6px;border-radius:6px;font-size:11px;color:var(--muted);font-family:inherit}
+.cmdlist{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:4px;scrollbar-width:thin}
+.cmditem{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:transparent;text-align:left;width:100%;cursor:pointer;color:var(--fg);font-size:14px}
+.cmditem:hover,.cmditem.sel{background:var(--accent-soft);color:var(--accent)}
+.cmditem .mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.cmdsec{font-size:11px;font-weight:700;color:var(--muted);padding:8px 12px 4px;text-transform:uppercase;letter-spacing:.05em}
+
+/* widgets customizer */
+.wgt-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--surface2);border:1px solid var(--line)}
+.wgt-item .mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+
+/* keyboard shortcuts indicator and quick triggers */
+.top-actions{display:flex;align-items:center;gap:6px}
+.top-btn{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--surface2);color:var(--muted)}
+.top-btn:hover{color:var(--fg);background:var(--accent-soft)}
+
+/* collapsible activities in settings */
+.cat-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 4px;cursor:pointer;border-bottom:1px solid var(--line);font-weight:600;font-size:13px;color:var(--muted)}
+.cat-hdr:hover{color:var(--fg)}
 </style>
 
 <div id="sprite" aria-hidden="true"></div>
@@ -546,6 +573,7 @@ textarea.field{min-height:96px;resize:vertical}
 </div>
 <div id="sheet" role="dialog" aria-modal="true" aria-label="Entrada"></div>
 <div id="lb" role="dialog" aria-modal="true" aria-label="Visor de fotos y vídeos"></div>
+<div id="cmdPal" role="dialog" aria-modal="true" aria-label="Paleta de comandos y búsqueda"></div>
 
 <script>
 (function(){
@@ -718,6 +746,8 @@ var ICONS={
   school:'<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-4.5"/><path d="M22 9v6"/>',
   left:'<path d="M15 5l-7 7 7 7"/>',
   right:'<path d="M9 5l7 7-7 7"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>',
+  sliders:'<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',
   wave:'<path d="M2 9c2.500 0 2.500-3 5-3s2.500 3 5 3 2.500-3 5-3 2.500 3 5 3M2 15c2.500 0 2.500-3 5-3s2.500 3 5 3 2.500-3 5-3 2.500 3 5 3M2 21c2.500 0 2.500-3 5-3s2.500 3 5 3 2.500-3 5-3 2.500 3 5 3" transform="translate(0 -3) scale(1 .85)"/>'
 };
 var ICON_GROUPS=[
@@ -1039,7 +1069,7 @@ function stCtx(){
   var avg=dayAvg(),sc=stScale(),scAvg={};
   if(sc){var t={};S.entries.forEach(function(e){if(e.sc&&e.sc[sc.id]){var k=dkey(e.ts);(t[k]=t[k]||[]).push(e.sc[sc.id]);}});Object.keys(t).forEach(function(k){scAvg[k]=t[k].reduce(function(a,b){return a+b;},0)/t[k].length;});}
   var base=[],i;for(i=-6;i<=0;i++){var m=avg[dkey(offDate(i).getTime())];if(m!==undefined)base.push(m);}
-  return {evs:evs,avg:avg,sc:sc,scAvg:scAvg,base:base.length?base.reduce(function(a,b){return a+b;},0)/base.length:null};
+  var an=stActNet();return {act:an.by,habit:an.habit,evs:evs,avg:avg,sc:sc,scAvg:scAvg,base:base.length?base.reduce(function(a,b){return a+b;},0)/base.length:null};
 }
 function stOne(e,off){
   var dist=e.dd-off;
@@ -1054,7 +1084,8 @@ function stIdx(c,off){
   if(off<=0)mv=c.avg[k]!==undefined?c.avg[k]:null;else mv=c.base;
   if(mv!==null)part=(5-mv)/4;
   if(off<=0&&c.sc&&c.scAvg[k]!==undefined){var sp=(c.scAvg[k]-1)/4;part=part===null?sp:(part+sp)/2;}
-  return {i:Math.round(100*(part===null?ln:.6*ln+.4*part)),load:load,ln:ln,mood:mv,part:part};
+  var adj=stAdj(c,off,k),b0=Math.round(100*(part===null?ln:.6*ln+.4*part));
+  return {i:Math.max(0,Math.min(100,b0+adj)),load:load,ln:ln,mood:mv,part:part,adj:adj};
 }
 function stWeek(c,startOff){
   var best={i:-1,off:0},sum=0,n=0,i;
@@ -1114,6 +1145,7 @@ function vStress(){
   var co=stCorr2(c);
   h+='<section class="card stack"><h3>Relación con tu ánimo</h3>'+(co?'<p style="margin:0">En los '+co.nh+' días con mucha carga tu ánimo medio fue <b>'+co.hi.toFixed(1)+'</b>; en los '+co.nl+' días tranquilos, <b>'+co.lo.toFixed(1)+'</b> (diferencia '+(co.lo-co.hi>=0?'−':'+')+Math.abs(co.lo-co.hi).toFixed(1)+').</p>':'<p class="muted" style="margin:0">Hacen falta al menos 4 días con carga alta y 4 tranquilos, con ánimo registrado, para comparar. Sigue apuntando tu ánimo.</p>')+
     '<p class="muted small" style="margin:0">Es una estimación orientativa basada en tus datos, no un diagnóstico. Muestra relación, no causa. Cómo se calcula: cada examen, entrega o tarea pendiente suma carga que crece según se acerca la fecha (examen 10 días, entrega 7, tarea 5) y según su prioridad; el 60 % del índice es carga y el 40 % tu ánimo (en previsión, el de los últimos 7 días).</p></section>';
+  h+=stressActsCard(true);
   return h;
 }
 
@@ -1322,22 +1354,84 @@ function dotsHtml(l){
 }
 function weekFor(d){if(!S.sched.ab)return '';var n=Math.round((mondayOf(d)-mondayOf(new Date(S.sched.ref)))/(7*864e5));return (((n%2)+2)%2)===0?'A':'B';}
 function dayClasses(k){var d=pdate(k),wd=wdayOf(d);return wd<S.sched.days?clsFor(wd,weekFor(d)):[];}
+var WGT_DEFS=[
+  {id:'quick',n:'Registro rápido',desc:'Caritas de ánimo para registrar el momento al instante'},
+  {id:'alerts',n:'Avisos urgentes',desc:'Recordatorio diario, tareas próximas y faltas'},
+  {id:'kpis',n:'Resumen y racha',desc:'Días de racha, media semanal y semana en círculos'},
+  {id:'pomo',n:'Pomodoro activo',desc:'Acceso directo al temporizador en marcha'},
+  {id:'stress',n:'Nivel de estrés',desc:'Indicador semanal de carga y estrés estimado'},
+  {id:'mood',n:'Diagnóstico anímico',desc:'Resumen de tu estado en los últimos 14 días'},
+  {id:'today',n:'Clases de hoy',desc:'Horario y aula de las clases programadas para hoy'},
+  {id:'pend',n:'Próximos pendientes',desc:'Tareas, exámenes y entregas más cercanas'},
+  {id:'goals',n:'Objetivos',desc:'Barras de progreso de tus metas semanales o mensuales'},
+  {id:'school',n:'Acceso escolar',desc:'Sugerencia para crear asignaturas si aún no hay'}
+];
+function defWidgets(){return WGT_DEFS.map(function(w){return w.id;});}
+function userWidgets(){
+  var cur=Array.isArray(S.widgets)?S.widgets:defWidgets();
+  var valid=cur.filter(function(id){return WGT_DEFS.some(function(w){return w.id===id;});});
+  WGT_DEFS.forEach(function(w){if(valid.indexOf(w.id)<0&&(!Array.isArray(S.widgets)||S.widgets.indexOf(w.id)>-1))valid.push(w.id);});
+  return valid;
+}
+function renderWidget(id){
+  if(id==='quick')return '<section class="card quick" aria-label="Registro rápido"><div class="row between"><h2 style="margin:0">¿Cómo va el día?</h2><button class="iconbtn" data-a="editHome" aria-label="Editar widgets de inicio" title="Personalizar pantalla de inicio">'+ic('sliders',18)+'</button></div><div class="faces">'+[1,2,3,4,5].map(function(v){return '<button class="facebtn" data-a="quick" data-v="'+v+'">'+face(v,52)+MOODS[v].n+'</button>';}).join('')+'</div></section>';
+  if(id==='alerts')return reminderBanner()+agAlerts()+absAlerts();
+  if(id==='kpis'){
+    var now=Date.now(),from=sod(addDays(new Date(),-6)).getTime(),avg=dayAvg();
+    var rec=S.entries.filter(function(e){return e.ts>=from;}),a7=rec.length?rec.reduce(function(t,e){return t+e.mood;},0)/rec.length:0;
+    var pend=S.events.filter(function(x){return !x.done;}).sort(evSort),late=pend.filter(function(x){return dayDiff(x.date)<0;}).length;
+    return tideCard()+'<section class="card stack"><h3>Resumen</h3><div class="tiles"><div class="tile"><b>'+streaks().cur+'</b><span class="small muted">días de racha</span></div><div class="tile"><b>'+(a7?num(a7):'–')+'</b><span class="small muted">ánimo 7 días</span></div><div class="tile"><b'+(late?' style="color:var(--danger)"':'')+'>'+pend.length+'</b><span class="small muted">pendientes'+(late?' ('+late+' vencidas)':'')+'</span></div></div>'+
+      '<div class="home7" role="group" aria-label="Últimos 7 días">'+[6,5,4,3,2,1,0].map(function(i){
+        var d=addDays(sod(new Date()),-i),k=dkey(d.getTime()),a=avg[k];
+        return '<button data-a="homeDay" data-v="'+k+'" class="'+(i===0?'td':'')+'" aria-label="'+esc(dayLabel(k))+(a?', ánimo medio '+num(a):', sin registro')+'"><i style="background:'+(a?'var(--m'+Math.round(a)+')':'var(--surface2)')+'"></i>'+['L','M','X','J','V','S','D'][wdayOf(d)]+'</button>';
+      }).join('')+'</div></section>';
+  }
+  if(id==='pomo')return homePomo();
+  if(id==='stress')return homeStress();
+  if(id==='mood')return homeMood();
+  if(id==='today')return homeToday();
+  if(id==='pend'){
+    var pend2=S.events.filter(function(x){return !x.done;}).sort(evSort),nx=pend2.slice(0,4);
+    return '<section class="card stack"><div class="row between"><h3>Próximos pendientes</h3><button class="btn sm ghost" data-a="tab" data-v="agenda">Agenda</button></div>'+(nx.length?nx.map(function(x){return evRow(x,true);}).join('')+(pend2.length>4?'<span class="small muted">y '+(pend2.length-4)+' más en Agenda</span>':''):'<p class="muted small" style="margin:0">No tienes tareas ni exámenes pendientes.</p>')+'</section>';
+  }
+  if(id==='goals')return goalsCard();
+  if(id==='school'){
+    if(!S.subjects.length)return '<section class="card stack"><h3>Empieza tu agenda escolar</h3><p class="muted small" style="margin:0">Crea primero tus asignaturas: después podrás colocarlas en el horario y asignarles tareas y exámenes.</p><div><button class="btn sm" data-a="newSubj">Crear asignatura</button></div></section>';
+    return '';
+  }
+  return '';
+}
 function vHome(){
-  var h=header(),now=Date.now(),from=sod(addDays(new Date(),-6)).getTime(),avg=dayAvg(),td=dkey(now);
-  h+='<section class="card quick" aria-label="Registro rápido"><h2>¿Cómo va el día?</h2><div class="faces">'+[1,2,3,4,5].map(function(v){return '<button class="facebtn" data-a="quick" data-v="'+v+'">'+face(v,52)+MOODS[v].n+'</button>';}).join('')+'</div></section>';
-  h+=reminderBanner()+agAlerts()+absAlerts();
-  var rec=S.entries.filter(function(e){return e.ts>=from;}),a7=rec.length?rec.reduce(function(t,e){return t+e.mood;},0)/rec.length:0;
-  var pend=S.events.filter(function(x){return !x.done;}).sort(evSort),late=pend.filter(function(x){return dayDiff(x.date)<0;}).length;
-  h+='<section class="card stack"><h3>Resumen</h3><div class="tiles"><div class="tile"><b>'+streaks().cur+'</b><span class="small muted">días de racha</span></div><div class="tile"><b>'+(a7?num(a7):'–')+'</b><span class="small muted">ánimo 7 días</span></div><div class="tile"><b'+(late?' style="color:var(--danger)"':'')+'>'+pend.length+'</b><span class="small muted">pendientes'+(late?' ('+late+' vencidas)':'')+'</span></div></div>';
-  h+='<div class="home7" role="group" aria-label="Últimos 7 días">'+[6,5,4,3,2,1,0].map(function(i){
-    var d=addDays(sod(new Date()),-i),k=dkey(d.getTime()),a=avg[k];
-    return '<button data-a="homeDay" data-v="'+k+'" class="'+(i===0?'td':'')+'" aria-label="'+esc(dayLabel(k))+(a?', ánimo medio '+num(a):', sin registro')+'"><i style="background:'+(a?'var(--m'+Math.round(a)+')':'var(--surface2)')+'"></i>'+['L','M','X','J','V','S','D'][wdayOf(d)]+'</button>';
-  }).join('')+'</div></section>';
-  h+=homePomo()+homeStress()+homeMood()+homeToday();
-  var nx=pend.slice(0,4);
-  h+='<section class="card stack"><div class="row between"><h3>Próximos pendientes</h3><button class="btn sm ghost" data-a="tab" data-v="agenda">Agenda</button></div>'+(nx.length?nx.map(function(x){return evRow(x,true);}).join('')+(pend.length>4?'<span class="small muted">y '+(pend.length-4)+' más en Agenda</span>':''):'<p class="muted small" style="margin:0">No tienes tareas ni exámenes pendientes.</p>')+'</section>';
-  h+=goalsCard();
-  if(!S.subjects.length)h+='<section class="card stack"><h3>Empieza tu agenda escolar</h3><p class="muted small" style="margin:0">Crea primero tus asignaturas: después podrás colocarlas en el horario y asignarles tareas y exámenes.</p><div><button class="btn sm" data-a="newSubj">Crear asignatura</button></div></section>';
+  var h=header(),wList=userWidgets();
+  wList.forEach(function(wid){h+=renderWidget(wid);});
+  h+='<div style="text-align:center;padding:12px 0 6px"><button class="btn sm ghost" data-a="editHome">'+ic('sliders',16)+' Personalizar widgets de inicio</button></div>';
+  return h;
+}
+function openHomeEditor(){
+  fo={type:'homeEdit'};
+  renderForm();$sheet.classList.add('open');
+}
+function renderHomeEditor(){
+  var cur=userWidgets();
+  var h='<div class="sheetbox"><div class="row between"><h2>Editar pantalla de inicio</h2><button class="iconbtn" data-a="close" aria-label="Cerrar">'+ic('x')+'</button></div>';
+  h+='<p class="muted small" style="margin:0">Elige qué widgets quieres mostrar y organízalos con las flechas de orden.</p>';
+  h+='<div class="stack" style="gap:8px">';
+  cur.forEach(function(wid,idx){
+    var def=WGT_DEFS.filter(function(w){return w.id===wid;})[0];if(!def)return;
+    h+='<div class="wgt-item"><span class="mid"><b>'+esc(def.n)+'</b><span class="small muted">'+esc(def.desc)+'</span></span>'+
+      '<button class="iconbtn" data-a="moveWgt" data-v="'+wid+'" data-d="-1"'+(idx===0?' disabled style="opacity:.35"':'')+' aria-label="Subir">'+ic('up',18)+'</button>'+
+      '<button class="iconbtn" data-a="moveWgt" data-v="'+wid+'" data-d="1"'+(idx===cur.length-1?' disabled style="opacity:.35"':'')+' aria-label="Bajar">'+ic('down',18)+'</button>'+
+      '<button class="btn sm ghost" data-a="toggleWgt" data-v="'+wid+'" style="color:var(--danger)">Ocultar</button></div>';
+  });
+  var hidden=WGT_DEFS.filter(function(w){return cur.indexOf(w.id)<0;});
+  if(hidden.length){
+    h+='<div class="cathead" style="margin-top:10px">Widgets disponibles para añadir</div>';
+    hidden.forEach(function(def){
+      h+='<div class="wgt-item" style="opacity:.85"><span class="mid"><b>'+esc(def.n)+'</b><span class="small muted">'+esc(def.desc)+'</span></span>'+
+        '<button class="btn sm" data-a="toggleWgt" data-v="'+def.id+'">'+ic('plus',16)+' Mostrar</button></div>';
+    });
+  }
+  h+='</div><div class="row between" style="margin-top:8px"><button class="btn sm ghost" data-a="resetWgt">Restablecer orden</button><button class="btn sm" data-a="close">Listo</button></div></div>';
   return h;
 }
 
@@ -1573,7 +1667,7 @@ function subById(id){for(var i=0;i<S.subs.length;i++)if(S.subs[i].id===id)return
 function connActs(){return S.acts.filter(function(a){return a.conn;});}
 function perBadge(p,sz){return '<span class="sbadge" style="background:'+esc(p.color)+';width:'+sz+'px;height:'+sz+'px;border-radius:50%;font-size:'+Math.round(sz*.5)+'px;font-weight:700">'+esc((p.name||'?').charAt(0).toUpperCase())+'</span>';}
 function linkChips(e){
-  var h='';
+  var h=sleepChip(e);
   (e.pp||[]).forEach(function(id){var p=persById(id);if(p)h+='<span class="chip">'+ic('users',14)+esc(p.name)+'</span>';});
   (e.sub||[]).forEach(function(id){var s=subById(id);if(s)h+='<span class="chip">'+ic(s.icon||'star',14)+esc(s.name)+'</span>';});
   return h;
@@ -1581,6 +1675,7 @@ function linkChips(e){
 /* bloque del editor: personas (acción Conexiones) y sub-acciones de las acciones elegidas */
 function advHtml(){
   var h='',sel=ed.acts.map(actById).filter(Boolean);
+  if(sel.some(function(a){return a.sleep;}))h+=sleepEditor();
   if(sel.some(function(a){return a.conn;})){
     var ps=S.people.slice().sort(byName);
     h+='<div class="stack"><h3>Con quién</h3>'+(ps.length?'<div class="acts">'+ps.map(function(p){var on=ed.pp.indexOf(p.id)>-1;return '<button class="act'+(on?' on':'')+'" data-a="pers" data-v="'+esc(p.id)+'" aria-pressed="'+on+'">'+perBadge(p,26)+'<span>'+esc(p.name)+'</span></button>';}).join('')+'</div>':'<p class="muted small" style="margin:0">Aún no has añadido a nadie. Escribe un nombre abajo.</p>')+
@@ -1695,6 +1790,7 @@ function advSettings(){
   h+='<div class="stack" style="gap:8px"><b>Conexiones</b>'+(on.length?on.map(function(a){return '<div class="arow-s" style="grid-template-columns:22px minmax(0,1fr) auto">'+ic(a.icon,22)+'<span style="overflow-wrap:anywhere">'+esc(a.name)+'</span><button class="btn sm ghost" data-a="connOff" data-v="'+esc(a.id)+'">Quitar</button></div>';}).join(''):'<span class="small muted">Aún no está vinculada a ninguna acción. Elige una (por ejemplo Amigos) y pulsa Vincular.</span>');
   if(off.length)h+='<div class="row"><select id="connSel" class="field" style="flex:1;min-width:0" aria-label="Acción a conectar">'+off.map(function(a){return '<option value="'+esc(a.id)+'">'+esc(a.name)+'</option>';}).join('')+'</select><button class="btn sm" data-a="connOn">Vincular</button></div>';
   h+='<div><button class="btn sm ghost" data-a="tab" data-v="people">Ver personas ('+S.people.length+')</button></div></div>';
+  h+=sleepSettings()+stressSettings();
   h+='<div class="stack" style="gap:8px"><b>Sub-acciones</b><p class="muted small" style="margin:0">Derivadas de una acción principal (por ejemplo Ejercicio → Correr, Gimnasio). Aparecen al seleccionar esa acción.</p>';
   S.subs.slice().sort(function(a,b){return (a.parent<b.parent?-1:a.parent>b.parent?1:0)||byName(a,b);}).forEach(function(s){
     var pa=actById(s.parent);
@@ -1762,6 +1858,7 @@ function moodAnalysis(r){
   pp.forEach(function(x){tp.push(insightText(x.name,x.f.pct)+' Procura quedar más a menudo.');});
   pn.forEach(function(x){tp.push('Con '+x.name+' tu ánimo es un '+Math.abs(x.f.pct)+'% más bajo: fíjate en qué hacéis o en si hay algo que conviene hablar.');});
   if(!tp.length)tp.push('Sigue registrando tu día y tus actividades: a medida que haya más datos aparecerán pautas más concretas.');
+  sleepSignals(r.days,fl,tp);stressSignals(fl,tp);
   fl.sort(function(a,b){return b.s-a.s;});
   return {summary:sum,flags:fl,tips:tp.slice(0,8)};
 }
@@ -1781,6 +1878,7 @@ function vMood(){
   h+='<section class="card stack"><h3>Por día de la semana</h3>'+DN.map(function(n,i){var x=wk[i];return '<div class="srow"><span>'+n+'</span><div class="bar"><i style="width:'+(x?Math.round(x.a/5*100):0)+'%;background:'+(x?'var(--m'+Math.round(x.a)+')':'var(--line)')+'"></i></div><span class="small muted" style="font-variant-numeric:tabular-nums">'+(x?num(x.a):'–')+'</span></div>';}).join('')+'</section>';
   if(r.sc.length)h+='<section class="card stack"><h3>Tus escalas</h3>'+r.sc.map(function(x){return '<div class="row between"><span class="row" style="gap:8px">'+ic(x.sc.icon||'chart',20)+esc(x.sc.name)+'</span><span class="small muted">'+num(x.avg)+'/5 · '+esc(scLabel(x.sc,Math.round(x.avg)).toLowerCase())+(x.pavg!==null?' ('+(x.avg-x.pavg>=0?'+':'−')+num(Math.abs(x.avg-x.pavg))+')':'')+'</span></div>';}).join('')+'</section>';
   h+='<section class="card stack"><p class="muted small" style="margin:0">Este análisis es una estimación orientativa basada solo en lo que has registrado: no es un diagnóstico clínico ni sustituye a un profesional. Si te preocupa cómo te sientes, habla con alguien de confianza o con un especialista.</p></section>';
+  h+=sleepCard(r.days)+stressActsCard(false);
   return h;
 }
 function homeMood(){
@@ -1866,6 +1964,12 @@ document.addEventListener('click',function(ev){
   var el=ev.target.closest('[data-a]');if(!el)return;
   var a=el.getAttribute('data-a'),v=el.getAttribute('data-v');
   switch(a){
+    case 'sleepOn':{var g3s=document.getElementById('sleepSel'),g3a=g3s?actById(g3s.value):null;if(g3a){g3a.sleep=true;save();render(true);}break;}
+    case 'sleepOff':{var g3o=actById(v);if(g3o){delete g3o.sleep;save();render(true);}break;}
+    case 'strUp':case 'strDn':{var g3t=document.getElementById('strSel'),g3b=g3t?actById(g3t.value):null;if(g3b){g3b.stress=a==='strUp'?1:-1;save();render(true);}break;}
+    case 'strOff':{var g3c=actById(v);if(g3c){delete g3c.stress;save();render(true);}break;}
+    case 'slQ':{if(!ed)break;ed.sl=ed.sl||{};if(ed.sl.q===+v)delete ed.sl.q;else ed.sl.q=+v;refreshAdv();break;}
+    case 'slT':{if(!ed)break;ed.sl=ed.sl||{};if(ed.sl.t===v)delete ed.sl.t;else ed.sl.t=v;refreshAdv();break;}
     case 'pers':{if(!ed)break;var i=ed.pp.indexOf(v);if(i>-1)ed.pp.splice(i,1);else ed.pp.push(v);el.classList.toggle('on',i<0);el.setAttribute('aria-pressed',String(i<0));break;}
     case 'subt':{if(!ed)break;var j=ed.sub.indexOf(v);if(j>-1)ed.sub.splice(j,1);else ed.sub.push(v);el.classList.toggle('on',j<0);el.setAttribute('aria-pressed',String(j<0));break;}
     case 'pAdd':{
@@ -2102,8 +2206,148 @@ setTimeout(function(){if(sbLoad()&&SYM().auto)syncNow(true);},3500);
   }catch(e1){}
 })();
 
-/* ---------- ui state ---------- */
-var ui={days:20,delSc:null,dyMsg:'',delCat:null,delGoal:null,remShown:false,fq:'',fm:[],fa:'',fx:false,calMode:'month',editAct:null,edIcon:'heart',tab:'home',range:30,calY:new Date().getFullYear(),calM:new Date().getMonth(),calSel:dkey(Date.now()),exp:'',expFmt:'',msg:'',iconPick:'heart',wipe:false,delAct:null,schView:'day',schWk:null,schDay:null,pm:null,agView:'pend',agDay:dkey(Date.now()),perSel:null,moodRange:30,packMsg:'',packConfirm:false,delSub:null};
+/* ---------- gamificación y hábitos: Marea (consistencia), acción avanzada Sueño y acciones que suben o bajan el estrés ---------- */
+var TIDES=[['Marea viva','Constancia muy alta: tu diario está en plena marea.','#0091FF'],['Marea creciente','Vas cogiendo ritmo: sigue así y la marea seguirá subiendo.','#12A594'],['Marea baja','La marea ha bajado un poco. Un registro hoy la hace subir.','#F5B800'],['Marea calma','Marea calma: sin prisa. Cada registro la vuelve a subir y saltarte días no borra tu progreso.','#8E8E93']];
+function tideInfo(){
+  var dA=dayAvg(),now=sod(new Date()),skip=dA[dkey(now.getTime())]?0:1,first=null,i,n=0;
+  S.entries.forEach(function(e){if(first===null||e.ts<first)first=e.ts;});
+  if(first===null)return null;
+  var span=Math.max(0,Math.min(30,Math.round((now.getTime()-sod(first).getTime())/864e5)+1-skip));
+  if(span<1)return null;
+  for(i=0;i<span;i++)if(dA[dkey(addDays(now,-(i+skip)).getTime())])n++;
+  var pct=Math.round(n/span*100);
+  return {n:n,span:span,pct:pct,miss:span-n,t:pct>=85?0:pct>=60?1:pct>=30?2:3,young:span<7};
+}
+function tideSvg(p,col,id){
+  var y=Math.round(60-p*.56);
+  return '<svg width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Marea al '+p+'%"><defs><clipPath id="'+id+'"><circle cx="32" cy="32" r="30"/></clipPath></defs><circle cx="32" cy="32" r="30" fill="var(--surface2)" stroke="var(--line)" stroke-width="1.5"/><g clip-path="url(#'+id+')"><path d="M-8 '+y+' q8 -6 16 0 t16 0 t16 0 t16 0 t16 0 V70 H-8z" fill="'+col+'" opacity=".85"/></g></svg>';
+}
+function tideCard(){
+  var t=tideInfo();if(!t)return '';
+  var T=TIDES[t.t],name=t.young?'Marea naciente':T[0],msg=t.young?'Aún hay pocos días para medir tu constancia. Sigue registrando y la marea irá tomando forma.':T[1];
+  return '<section class="card stack" aria-label="Marea"><h3>Marea</h3><div class="row" style="gap:14px">'+tideSvg(t.pct,T[2],'tide'+Math.floor(Math.random()*1e6))+'<div style="min-width:0"><div style="font-size:20px;font-weight:700">'+name+'</div><div class="small">Índice de consistencia: <b>'+t.pct+'%</b></div><div class="small muted">'+t.n+' de '+t.span+' días con registro</div></div></div><p class="small" style="margin:0">'+esc(msg)+'</p><p class="muted small" style="margin:0">'+(t.miss?'Has dejado '+t.miss+(t.miss===1?' día':' días')+' sin registro en este periodo. Cada día suelto solo resta '+num(100/t.span)+' puntos: no pierdes el progreso de golpe.':'Registraste todos los días de este periodo.')+' Se calcula sobre los últimos 30 días móviles.'+(t.young?'':'')+'</p></section>';
+}
+/* sueño */
+var SLQ=['Muy mala','Mala','Regular','Buena','Excelente'],SLT={e:'Acostado temprano',n:'Horario habitual',l:'Acostado tarde'};
+function sleepEditor(){
+  var s=ed.sl||{};
+  return '<div class="stack"><h3>Sueño</h3><div class="row between"><label for="slH" class="small">Horas dormidas</label><input id="slH" class="field" type="number" min="0" max="16" step="0.5" inputmode="decimal" style="width:110px" value="'+(s.h||'')+'" placeholder="7,5"></div>'+
+    '<div class="stack" style="gap:6px"><span class="small">Calidad del sueño</span><div class="sclv" role="group" aria-label="Calidad">'+[1,2,3,4,5].map(function(n){return '<button data-a="slQ" data-v="'+n+'" class="'+(s.q===n?'on':'')+'" aria-pressed="'+(s.q===n)+'" aria-label="'+SLQ[n-1]+'">'+n+'</button>';}).join('')+'</div><span class="small muted">'+(s.q?SLQ[s.q-1]:'Sin valorar')+'</span></div>'+
+    '<div class="stack" style="gap:6px"><span class="small">¿A qué hora te acostaste?</span><div class="seg" style="grid-template-columns:repeat(3,1fr)">'+[['e','Temprano'],['n','Como siempre'],['l','Tarde']].map(function(t){return '<button data-a="slT" data-v="'+t[0]+'" class="'+(s.t===t[0]?'on':'')+'" aria-pressed="'+(s.t===t[0])+'">'+t[1]+'</button>';}).join('')+'</div></div></div>';
+}
+function setSleep(t){
+  var has=ed.acts.map(actById).filter(Boolean).some(function(a){return a.sleep;}),s=ed.sl||{};
+  if(has&&(s.h>0||s.q||s.t)){t.sl={};if(s.h>0)t.sl.h=s.h;if(s.q)t.sl.q=s.q;if(s.t)t.sl.t=s.t;}else delete t.sl;
+}
+function sleepChip(e){
+  if(!e.sl)return '';
+  var p=[e.sl.h?num(e.sl.h)+' h':'',e.sl.q?SLQ[e.sl.q-1]:'',e.sl.t?SLT[e.sl.t]:''].filter(Boolean).join(' · ');
+  return p?'<span class="chip">'+ic('moon',14)+esc(p)+'</span>':'';
+}
+function sleepStats(days){
+  var from=Date.now()-days*864e5,by={},dA=dayAvg();
+  S.entries.forEach(function(e){if(!e.sl||e.ts<from)return;var k=dkey(e.ts),o=by[k]=by[k]||{h:[],q:[],t:[]};if(e.sl.h>0)o.h.push(e.sl.h);if(e.sl.q)o.q.push(e.sl.q);if(e.sl.t)o.t.push(e.sl.t);});
+  var D=Object.keys(by).map(function(k){var o=by[k];return {h:o.h.length?mean(o.h):null,q:o.q.length?mean(o.q):null,t:o.t[0]||null,m:dA[k]!==undefined?dA[k]:null};});
+  if(D.length<3)return null;
+  var hs=D.filter(function(d){return d.h!==null;}),qs=D.filter(function(d){return d.q!==null;}),ts=D.filter(function(d){return d.t;});
+  var mm=function(l){var v=l.filter(function(d){return d.m!==null;}).map(function(d){return d.m;});return v.length?{a:mean(v),n:v.length}:null;};
+  var st={n:D.length,nh:hs.length,nt:ts.length,h:hs.length?mean(hs.map(function(d){return d.h;})):null,q:qs.length?mean(qs.map(function(d){return d.q;})):null,
+    reg:ts.length?ts.filter(function(d){return d.t==='n';}).length/ts.length:null,late:ts.length?ts.filter(function(d){return d.t==='l';}).length/ts.length:null};
+  st.hb=[['Menos de 6 h',function(d){return d.h<6;}],['6–7 h',function(d){return d.h>=6&&d.h<7;}],['7–8 h',function(d){return d.h>=7&&d.h<8;}],['8 h o más',function(d){return d.h>=8;}]].map(function(b){return {l:b[0],r:mm(hs.filter(b[1]))};});
+  st.qb=[['Mala (1–2)',function(d){return d.q<=2;}],['Regular (3)',function(d){return d.q>2&&d.q<4;}],['Buena (4–5)',function(d){return d.q>=4;}]].map(function(b){return {l:b[0],r:mm(qs.filter(b[1]))};});
+  st.tb=[['Temprano','e'],['Como siempre','n'],['Tarde','l']].map(function(b){return {l:b[0],r:mm(ts.filter(function(d){return d.t===b[1];}))};});
+  var lo=mm(hs.filter(function(d){return d.h<7;})),hi=mm(hs.filter(function(d){return d.h>=7;}));
+  st.cmp=lo&&hi&&lo.n>=3&&hi.n>=3?{pct:Math.round((hi.a/lo.a-1)*100)}:null;
+  var bq=st.qb[2].r,mq=st.qb[0].r;st.qd=bq&&mq&&bq.n>=3&&mq.n>=3?bq.a-mq.a:null;
+  var tl=st.tb[2].r,tn=st.tb[1].r;st.ld=tl&&tn&&tl.n>=3&&tn.n>=3?tl.a-tn.a:null;
+  return st;
+}
+function sleepInsights(st){
+  var o=[];
+  if(st.h!==null)o.push('Duermes de media '+num(st.h)+' h por noche registrada.');
+  if(st.cmp&&st.cmp.pct>=5)o.push('¡Cuando duermes 7 h o más, tu ánimo es un +'+st.cmp.pct+'% mayor!');
+  else if(st.cmp&&st.cmp.pct<=-5)o.push('Curiosamente, con 7 h o más tu ánimo no mejora ('+st.cmp.pct+'%): puede pesar más la calidad o el horario.');
+  if(st.qd!==null&&Math.abs(st.qd)>=.3)o.push('Tras dormir bien (4–5) tu ánimo es '+(st.qd>0?'+':'−')+num(Math.abs(st.qd))+' puntos '+(st.qd>0?'mayor':'menor')+' que tras dormir mal.');
+  if(st.ld!==null&&st.ld<=-.3)o.push('Los días que te acuestas tarde tu ánimo baja '+num(Math.abs(st.ld))+' puntos frente a tu horario habitual.');
+  return o;
+}
+function sleepSignals(days,fl,tp){
+  var st=sleepStats(days);if(!st)return;
+  if(st.nh>=3&&st.h<6.5){fl.push({t:'Duermes poco: '+num(st.h)+' h de media.',s:st.h<6?2:1});tp.push('Intenta acostarte a una hora fija: dormir entre 7 y 9 horas suele mejorar el ánimo del día siguiente.');}
+  if(st.q!==null&&st.q<=2.5){fl.push({t:'La calidad de tu sueño es baja ('+num(st.q)+'/5).',s:1});tp.push('Cuida la rutina previa al sueño: pantallas fuera un rato antes, cena ligera y poca cafeína por la tarde.');}
+  if(st.nt>=4&&st.late>=.4){fl.push({t:'Te acuestas tarde en el '+Math.round(st.late*100)+'% de las noches registradas.',s:1});tp.push('Adelanta la hora de acostarte 15 minutos cada noche hasta ganar regularidad.');}
+  if(st.cmp&&st.cmp.pct>=8){fl.push({t:'Dormir 7 h o más se asocia con un ánimo un +'+st.cmp.pct+'% mayor.',s:0});tp.push('Protege tus horas de sueño: según tus datos es de lo que más mueve tu ánimo.');}
+}
+function sleepCard(days){
+  if(!S.acts.some(function(a){return a.sleep;}))return '';
+  var st=sleepStats(Math.max(30,days||90));
+  if(!st)return '<section class="card stack"><h3>Sueño</h3><p class="muted small" style="margin:0">Registra tu sueño en al menos 3 días (con la acción vinculada a Sueño) para ver cómo se relaciona con tu ánimo.</p></section>';
+  var row=function(b){return b.r?'<div class="srow"><span>'+esc(b.l)+'</span><div class="bar"><i style="width:'+Math.round(b.r.a/5*100)+'%;background:var(--accent)"></i></div><span class="small muted">ánimo '+num(b.r.a)+' · '+b.r.n+'</span></div>':'';};
+  var h='<section class="card stack"><h3>Sueño y ánimo</h3><div class="tiles"><div class="tile"><b>'+(st.h!==null?num(st.h):'–')+'</b><span class="small muted">horas de media</span></div><div class="tile"><b>'+(st.q!==null?num(st.q):'–')+'</b><span class="small muted">calidad (1–5)</span></div><div class="tile"><b>'+(st.reg!==null?Math.round(st.reg*100)+'%':'–')+'</b><span class="small muted">horario habitual</span></div></div>';
+  var hb=st.hb.map(row).join(''),qb=st.qb.map(row).join(''),tb=st.tb.map(row).join('');
+  if(hb)h+='<div class="cathead">Ánimo según las horas</div>'+hb;
+  if(qb)h+='<div class="cathead">Ánimo según la calidad</div>'+qb;
+  if(tb)h+='<div class="cathead">Ánimo según la hora de acostarte</div>'+tb;
+  return h+sleepInsights(st).map(function(t){return '<div class="row" style="align-items:flex-start;gap:10px">'+ic('moon',18)+'<span class="small">'+esc(t)+'</span></div>';}).join('')+'<p class="muted small" style="margin:0">Muestra relación, no causa. Se usa el ánimo medio del día de cada registro.</p></section>';
+}
+/* acciones que suben (+ estrés) o bajan (− estrés) el estrés */
+function stActNet(){
+  var by={},from=Date.now()-7*864e5,tot=0,nd=0,k;
+  S.entries.forEach(function(e){var kk=dkey(e.ts),o=by[kk]=by[kk]||{u:{},d:{}};e.acts.forEach(function(id){var a=actById(id);if(!a||!a.stress)return;(a.stress>0?o.u:o.d)[id]=1;});});
+  var net={};
+  Object.keys(by).forEach(function(kk){net[kk]=Object.keys(by[kk].u).length-Object.keys(by[kk].d).length;});
+  for(k in net){var t=pdate(k).getTime();if(t>=sod(new Date(from)).getTime()){tot+=net[k];nd++;}}
+  return {by:net,habit:nd?tot/nd:0};
+}
+function stAdj(c,off,k){
+  if(!c.act)return 0;
+  var v=off<=0?(c.act[k]||0)*6:c.habit*3;
+  return Math.max(-18,Math.min(18,Math.round(v)));
+}
+function stressSignals(fl,tp){
+  var from=Date.now()-7*864e5,up={},dn={},un={};
+  S.entries.forEach(function(e){if(e.ts<from)return;var k=dkey(e.ts);e.acts.forEach(function(id){var a=actById(id);if(!a||!a.stress)return;if(a.stress>0){up[k]=1;un[a.name]=(un[a.name]||0)+1;}else dn[k]=1;});});
+  if(Object.keys(up).length>=4&&Object.keys(dn).length<=1){
+    var names=Object.keys(un).sort(function(a,b){return un[b]-un[a];}).slice(0,2).join(', '),relief=S.acts.filter(function(a){return a.stress<0;}).slice(0,3).map(function(a){return a.name;});
+    fl.push({t:'Esta semana predominan las acciones que te suben el estrés ('+names+').',s:1});
+    tp.push('Equilíbralo con '+(relief.length?relief.join(', '):'alguna acción que baje tu estrés (márcalas en Ajustes → Acciones avanzadas)')+'.');
+  }
+}
+function stressActsCard(show){
+  var m=S.acts.filter(function(a){return a.stress;});
+  if(!m.length)return show?'<section class="card stack"><h3>Acciones y estrés</h3><p class="muted small" style="margin:0">Marca qué acciones suben (+ estrés) o bajan (− estrés) el tuyo en Ajustes → Acciones avanzadas. El índice las tiene en cuenta como un empujón suave, no como una cantidad exacta.</p><div><button class="btn sm ghost" data-a="tab" data-v="set">Ir a Ajustes</button></div></section>':'';
+  var now=stIdx(stCtx(),0),sc=stScale(),from=Date.now()-7*864e5,cnt={};
+  S.entries.forEach(function(e){if(e.ts>=from)e.acts.forEach(function(id){cnt[id]=(cnt[id]||0)+1;});});
+  var rows=m.map(function(a){
+    var x='';
+    if(sc){var w=[],o=[];S.entries.forEach(function(e){if(e.sc&&e.sc[sc.id])(e.acts.indexOf(a.id)>-1?w:o).push(e.sc[sc.id]);});
+      if(w.length>=3&&o.length>=3){var d=mean(w)-mean(o);x=' · tu escala '+(d>=0?'+':'−')+num(Math.abs(d))+(Math.abs(d)<.2||(d>0)===(a.stress>0)?'':' (no coincide)');}}
+    return '<div class="row between small"><span class="row" style="gap:8px">'+ic(a.icon,18)+esc(a.name)+'</span><span class="muted" style="text-align:right">'+(a.stress>0?'+ estrés':'− estrés')+' · '+(cnt[a.id]||0)+' esta semana'+x+'</span></div>';
+  }).join('');
+  return '<section class="card stack"><h3>Acciones y estrés</h3><p class="small" style="margin:0">Hoy las acciones registradas '+(now.adj===0?'no modifican':'modifican en <b>'+(now.adj>0?'+':'−')+Math.abs(now.adj)+'</b> puntos')+' el índice.</p>'+rows+'<p class="muted small" style="margin:0">Ajuste suave de hasta ±18 puntos. Si tienes la escala «Estrés», se compara con tus valoraciones.</p></section>';
+}
+/* ajustes: Sueño y Estrés dentro de Acciones avanzadas */
+function sleepSettings(){
+  var on=S.acts.filter(function(a){return a.sleep;}),off=S.acts.filter(function(a){return !a.sleep;});
+  var h='<div class="stack" style="gap:8px"><b>Sueño</b><p class="muted small" style="margin:0">Une una acción con las escalas: al elegirla en una entrada te pregunta cuántas horas dormiste, la calidad y si te acostaste temprano, tarde o como siempre. Se analiza junto a tu ánimo.</p>';
+  h+=on.length?on.map(function(a){return '<div class="arow-s" style="grid-template-columns:22px minmax(0,1fr) auto">'+ic(a.icon,22)+'<span style="overflow-wrap:anywhere">'+esc(a.name)+'</span><button class="btn sm ghost" data-a="sleepOff" data-v="'+esc(a.id)+'">Quitar</button></div>';}).join(''):'<span class="small muted">Aún no está vinculada. Elige una acción (por ejemplo Dormir bien) y pulsa Vincular.</span>';
+  if(off.length)h+='<div class="row"><select id="sleepSel" class="field" style="flex:1;min-width:0" aria-label="Acción de sueño">'+off.map(function(a){return '<option value="'+esc(a.id)+'">'+esc(a.name)+'</option>';}).join('')+'</select><button class="btn sm" data-a="sleepOn">Vincular</button></div>';
+  return h+'</div>';
+}
+function stressSettings(){
+  var on=S.acts.filter(function(a){return a.stress;}),off=S.acts.filter(function(a){return !a.stress;});
+  var h='<div class="stack" style="gap:8px"><b>Estrés</b><p class="muted small" style="margin:0">Marca las acciones que suben (+ estrés) o bajan (− estrés) tu estrés. No es una cantidad exacta: el nivel de estrés las tiene en cuenta como un empujón suave.</p>';
+  h+=on.map(function(a){return '<div class="arow-s" style="grid-template-columns:22px minmax(0,1fr) auto auto">'+ic(a.icon,22)+'<span style="overflow-wrap:anywhere">'+esc(a.name)+'</span><span class="chip" style="color:'+(a.stress>0?'var(--danger)':'var(--m3)')+'">'+(a.stress>0?'+ estrés':'− estrés')+'</span><button class="btn sm ghost" data-a="strOff" data-v="'+esc(a.id)+'">Quitar</button></div>';}).join('');
+  if(off.length)h+='<div class="stack" style="gap:8px"><select id="strSel" class="field" aria-label="Acción">'+off.map(function(a){return '<option value="'+esc(a.id)+'">'+esc(a.name)+'</option>';}).join('')+'</select><div class="row"><button class="btn sm danger" data-a="strUp">+ estrés</button><button class="btn sm" data-a="strDn">− estrés</button></div></div>';
+  return h+'</div>';
+}
+document.addEventListener('input',function(ev){
+  var t=ev.target;if(!t||t.id!=='slH'||!ed)return;
+  ed.sl=ed.sl||{};var v=parseFloat(String(t.value).replace(',','.'));
+  if(!isNaN(v)&&v>=0&&v<=16)ed.sl.h=Math.round(v*10)/10;else delete ed.sl.h;
+});
+
+var ui={days:20,delSc:null,dyMsg:'',delCat:null,delGoal:null,remShown:false,fq:'',fm:[],fa:'',fx:false,calMode:'month',editAct:null,edIcon:'heart',tab:'home',range:30,calY:new Date().getFullYear(),calM:new Date().getMonth(),calSel:dkey(Date.now()),exp:'',expFmt:'',msg:'',iconPick:'heart',wipe:false,delAct:null,schView:'day',schWk:null,schDay:null,pm:null,agView:'pend',agDay:dkey(Date.now()),perSel:null,moodRange:30,packMsg:'',packConfirm:false,delSub:null,cmdQ:'',cmdSel:0,catsOpen:{}};
 
 /* ---------- media (IndexedDB) ---------- */
 var MDB={db:null,ok:true,th:{}};
@@ -2376,9 +2620,114 @@ function importMedia(list,done){
 }
 
 var ed=null;
-var $view=document.getElementById('view'),$tabs=document.getElementById('tabs'),$sheet=document.getElementById('sheet');
+var $view=document.getElementById('view'),$tabs=document.getElementById('tabs'),$sheet=document.getElementById('sheet'),$cmdPal=document.getElementById('cmdPal');
 
-/* ---------- tab bar ---------- */
+/* ---------- command palette & quick search (Cmd/Ctrl + K) ---------- */
+function getCmdItems(query){
+  var q=(query||'').trim().toLowerCase(),items=[];
+  // Acciones y navegación directa
+  var actions=[
+    {cat:'Acciones',icon:'plus',name:'Nueva entrada rápida',desc:'Registrar ánimo y nota del momento',act:'quickNew',k:'⌘N'},
+    {cat:'Navegación',icon:'home',name:'Ir a Inicio',desc:'Resumen y widgets del día',act:'navTab',tab:'home'},
+    {cat:'Navegación',icon:'list',name:'Ir a Agenda',desc:'Tareas, exámenes y entregas',act:'navTab',tab:'agenda'},
+    {cat:'Navegación',icon:'clock',name:'Ir a Horario',desc:'Clases semanales y aulas',act:'navTab',tab:'sched'},
+    {cat:'Navegación',icon:'wave',name:'Ir a Entradas de ánimo',desc:'Historial cronológico de registros',act:'navTab',tab:'log'},
+    {cat:'Navegación',icon:'cal',name:'Ir a Calendario',desc:'Vista mensual y puntos de ánimo',act:'navTab',tab:'cal'},
+    {cat:'Navegación',icon:'stats',name:'Ir a Estadísticas',desc:'Gráficos y rachas',act:'navTab',tab:'stats'},
+    {cat:'Navegación',icon:'brain',name:'Estado anímico',desc:'Diagnóstico y patrones de los últimos 14 días',act:'navTab',tab:'mood'},
+    {cat:'Navegación',icon:'school',name:'Asignaturas',desc:'Gestión de asignaturas escolares',act:'navTab',tab:'subj'},
+    {cat:'Navegación',icon:'users',name:'Profesores',desc:'Directorio de profesores y despachos',act:'navTab',tab:'teach'},
+    {cat:'Navegación',icon:'timer',name:'Pomodoro',desc:'Temporizador de estudio por bloques',act:'navTab',tab:'pomo'},
+    {cat:'Navegación',icon:'flag',name:'Faltas y retrasos',desc:'Contador y alertas de asistencia',act:'navTab',tab:'abs'},
+    {cat:'Navegación',icon:'gear',name:'Ajustes',desc:'Temas, actividades, datos y copias',act:'navTab',tab:'set'},
+    {cat:'Acciones',icon:'sliders',name:'Personalizar widgets de inicio',desc:'Configurar orden y qué mostrar en Inicio',act:'editHome'}
+  ];
+  actions.forEach(function(a){
+    if(!q||a.name.toLowerCase().indexOf(q)>-1||a.desc.toLowerCase().indexOf(q)>-1||a.cat.toLowerCase().indexOf(q)>-1){
+      items.push(a);
+    }
+  });
+
+  // Búsqueda en Asignaturas
+  if(S.subjects&&S.subjects.length){
+    S.subjects.forEach(function(s){
+      if(!q||s.name.toLowerCase().indexOf(q)>-1||(s.room&&s.room.toLowerCase().indexOf(q)>-1)){
+        items.push({cat:'Asignaturas',icon:s.icon||'book',name:s.name,desc:(s.room?'Aula '+s.room:'Asignatura')+(s.teacher?' · con '+((teachById(s.teacher)||{}).name||''):''),act:'openSubj',id:s.id,color:s.color});
+      }
+    });
+  }
+
+  // Búsqueda en Tareas y Eventos de agenda
+  if(S.events&&S.events.length){
+    S.events.slice(0,25).forEach(function(ev){
+      var t=EVT[ev.type]||{n:'Tarea',i:'check'};
+      if(!q||ev.title.toLowerCase().indexOf(q)>-1||(ev.note&&ev.note.toLowerCase().indexOf(q)>-1)){
+        items.push({cat:'Agenda',icon:t.i,name:ev.title,desc:t.n+' · '+dayLabel(ev.date)+(ev.done?' (Hecho)':' (Pendiente)'),act:'openEv',id:ev.id});
+      }
+    });
+  }
+
+  // Búsqueda en Notas de entradas recientes
+  if(q&&S.entries&&S.entries.length){
+    var nMatches=0;
+    S.entries.forEach(function(e){
+      if(nMatches>=10)return;
+      var text=((e.title||'')+' '+(e.note||'')).toLowerCase();
+      if(text.indexOf(q)>-1){
+        nMatches++;
+        items.push({cat:'Entradas de ánimo',icon:'wave',name:(e.title||(e.note?e.note.slice(0,40)+'...':'Entrada sin nota')),desc:dayLabel(dkey(e.ts))+' · Ánimo: '+MOODS[e.mood].n,act:'openEntry',id:e.id});
+      }
+    });
+  }
+
+  return items;
+}
+function openCmdPal(){
+  ui.cmdQ='';ui.cmdSel=0;
+  $cmdPal.classList.add('open');
+  renderCmdPal();
+  setTimeout(function(){var inp=document.getElementById('cmdInput');if(inp){inp.focus();inp.select();}},50);
+}
+function closeCmdPal(){
+  $cmdPal.classList.remove('open');
+  $cmdPal.innerHTML='';
+}
+function renderCmdPal(){
+  var items=getCmdItems(ui.cmdQ);
+  if(ui.cmdSel>=items.length)ui.cmdSel=Math.max(0,items.length-1);
+  var h='<div class="cmdbox" role="dialog" aria-label="Búsqueda rápida y comandos">'+
+    '<div class="cmdtop">'+ic('search',20)+'<input id="cmdInput" placeholder="Buscar o escribir un comando..." value="'+esc(ui.cmdQ)+'" autocomplete="off" spellcheck="false">'+
+    '<kbd>Esc para cerrar</kbd><button class="iconbtn" data-a="cmdClose" style="width:30px;height:30px" aria-label="Cerrar">'+ic('x',16)+'</button></div>'+
+    '<div class="cmdlist" id="cmdList">';
+  if(!items.length){
+    h+='<div class="empty" style="padding:24px 12px">No se encontraron resultados para «'+esc(ui.cmdQ)+'».</div>';
+  }else{
+    var lastCat='';
+    items.forEach(function(item,i){
+      if(item.cat!==lastCat){
+        h+='<div class="cmdsec">'+esc(item.cat)+'</div>';
+        lastCat=item.cat;
+      }
+      var isSel=i===ui.cmdSel;
+      h+='<button class="cmditem'+(isSel?' sel':'')+'" data-a="cmdExec" data-i="'+i+'" role="option" aria-selected="'+isSel+'">'+
+        '<span class="sbadge" style="width:32px;height:32px;border-radius:8px;background:'+(item.color||'var(--surface2)')+';color:'+(item.color?'#fff':'var(--accent)')+'">'+ic(item.icon||'search',18)+'</span>'+
+        '<span class="mid"><b>'+esc(item.name)+'</b>'+(item.desc?'<span class="small muted">'+esc(item.desc)+'</span>':'')+'</span>'+
+        (item.k?'<kbd>'+item.k+'</kbd>':'')+ic('right',16)+'</button>';
+    });
+  }
+  h+='</div></div>';
+  $cmdPal.innerHTML=h;
+}
+function execCmdItem(item){
+  closeCmdPal();
+  if(!item)return;
+  if(item.act==='quickNew')openEditor({});
+  else if(item.act==='navTab'){ui.tab=item.tab;render();}
+  else if(item.act==='editHome')openHomeEditor();
+  else if(item.act==='openSubj')openForm('subj',item.id);
+  else if(item.act==='openEv')openEv(item.id);
+  else if(item.act==='openEntry'){var e=S.entries.filter(function(x){return x.id===item.id;})[0];if(e)openEditor({entry:e});}
+}
 
 /* ---------- school: subjects & teachers ---------- */
 var SW=['#E5484D','#F76B15','#F5B800','#30A46C','#12A594','#0091FF','#3E63DD','#8E4EC6','#E93D82','#6F6F6F'];
@@ -2529,6 +2878,7 @@ function openForm(type,id){
 }
 function fld(id,label,val,extra){return '<div class="stack" style="gap:6px"><h3>'+label+'</h3><input id="'+id+'" class="field" value="'+esc(val)+'" autocomplete="off" '+(extra||'')+'></div>';}
 function renderForm(){
+  if(fo.type==='homeEdit'){$sheet.innerHTML=renderHomeEditor();return;}
   if(fo.type==='per'){$sheet.innerHTML=renderPer();return;}
   if(fo.type==='ev'){$sheet.innerHTML=renderEv();return;}
   if(fo.type==='abs'){$sheet.innerHTML=renderAbs();return;}
@@ -2598,7 +2948,7 @@ function renderTabs(){
 
 /* ---------- views ---------- */
 function header(){
-  var h='<div class="top"><div class="ttl"><div class="today">'+esc(F_DAY.format(new Date()))+'</div><div class="brand">Mareas</div></div><div class="orb">'+ic('wave',26)+'</div></div>';
+  var h='<div class="top"><div class="ttl"><div class="today">'+esc(F_DAY.format(new Date()))+'</div><div class="brand">Mareas</div></div><div class="top-actions"><button class="top-btn" data-a="cmdPal" title="Búsqueda rápida y comandos (Cmd/Ctrl + K)" aria-label="Búsqueda rápida">'+ic('search',20)+'</button><div class="orb">'+ic('wave',26)+'</div></div></div>';
   if(ui.tab==='log'||ui.tab==='cal'||ui.tab==='stats'||ui.tab==='mood')h+='<div class="seg" style="grid-template-columns:repeat(4,1fr)" role="tablist">'+[['log','Entradas'],['cal','Calendario'],['stats','Estadísticas'],['mood','Estado']].map(function(t){return '<button data-a="tab" data-v="'+t[0]+'" class="'+(ui.tab===t[0]?'on':'')+'" aria-pressed="'+(ui.tab===t[0])+'">'+t[1]+'</button>';}).join('')+'</div>';
   return h;
 }
@@ -2779,7 +3129,7 @@ function vStats(){
   h+='<section class="card stack"><h3>Cómo te has sentido</h3><div class="dist">'+[5,4,3,2,1].filter(function(v){return cnt[v];}).map(function(v){return '<i style="flex:'+cnt[v]+';background:var(--m'+v+')"></i>';}).join('')+'</div>';
   [5,4,3,2,1].forEach(function(v){var p=Math.round(cnt[v]/list.length*100);h+='<div class="drow">'+face(v,28)+'<div class="bar"><i style="width:'+p+'%;background:var(--m'+v+')"></i></div><span class="small muted" style="font-variant-numeric:tabular-nums">'+cnt[v]+' · '+p+'%</span></div>';});
   h+='</section>';
-  h+=scaleCards(list,bks);
+  h+=tideCard()+sleepCard(ui.range)+scaleCards(list,bks);
   var rows=[];
   S.acts.forEach(function(a){
     var w=list.filter(function(e){return e.acts.indexOf(a.id)>-1;});
@@ -2812,16 +3162,21 @@ function vSet(){
   h+=packCard();
   h+=cloudCard();
   h+=appearanceCard();
-  h+='<section class="card stack"><h3>Actividades</h3><div>';
-  var flat=[];actsByCat().forEach(function(g){g.acts.forEach(function(a,j){flat.push({a:a,g:g,j:j});});});
-  flat.forEach(function(it){
-    var a=it.a,i=it.j,gl=it.g.acts.length;
-    if(it.j===0)h+='<div class="cathead" style="padding-top:12px">'+esc(it.g.cat.name)+'</div>';
-    if(ui.editAct===a.id){
-      h+='<div class="stack" style="padding:10px 0;border-bottom:1px solid var(--line)"><input id="editName" class="field" maxlength="24" value="'+esc(a.name)+'" aria-label="Nombre de la actividad"><select id="editCat" class="field" aria-label="Categoría">'+catOptions(a.cat)+'</select>'+iconPicker('pickEditIcon',ui.edIcon)+'<div class="row" style="flex-wrap:wrap"><button class="btn sm" data-a="saveAct">Guardar</button><button class="btn sm ghost" data-a="cancelAct">Cancelar</button><button class="btn sm danger" data-a="delAct" data-v="'+esc(a.id)+'">'+(ui.delAct===a.id?'Confirmar borrado':'Eliminar')+'</button></div><div class="msg" id="editMsg"></div></div>';
-      return;
+  var totalActs=S.acts.length;
+  h+='<section class="card stack"><div class="row between"><h3 style="margin:0">Actividades ('+totalActs+')</h3><div class="row" style="gap:6px"><button class="btn sm ghost" data-a="actFoldAll" data-v="1" title="Plegar todas">Plegar</button><button class="btn sm ghost" data-a="actFoldAll" data-v="0" title="Desplegar todas">Expandir</button></div></div><div>';
+  actsByCat().forEach(function(g){
+    var isOpen=ui.catsOpen[g.cat.id]!==false;
+    h+='<button class="cat-hdr" data-a="foldCat" data-v="'+esc(g.cat.id)+'" style="background:none;border:none;width:100%"><span>'+esc(g.cat.name)+' ('+g.acts.length+')</span><span>'+(isOpen?'▲ Plegar':'▼ Desplegar')+'</span></button>';
+    if(isOpen){
+      g.acts.forEach(function(a,i){
+        var gl=g.acts.length;
+        if(ui.editAct===a.id){
+          h+='<div class="stack" style="padding:10px 0;border-bottom:1px solid var(--line)"><input id="editName" class="field" maxlength="24" value="'+esc(a.name)+'" aria-label="Nombre de la actividad"><select id="editCat" class="field" aria-label="Categoría">'+catOptions(a.cat)+'</select>'+iconPicker('pickEditIcon',ui.edIcon)+'<div class="row" style="flex-wrap:wrap"><button class="btn sm" data-a="saveAct">Guardar</button><button class="btn sm ghost" data-a="cancelAct">Cancelar</button><button class="btn sm danger" data-a="delAct" data-v="'+esc(a.id)+'">'+(ui.delAct===a.id?'Confirmar borrado':'Eliminar')+'</button></div><div class="msg" id="editMsg"></div></div>';
+          return;
+        }
+        h+='<div class="arow-s" style="grid-template-columns:22px minmax(0,1fr) auto auto auto;gap:6px">'+ic(a.icon,22)+'<span style="overflow-wrap:anywhere;padding-left:6px">'+esc(a.name)+'</span><button class="iconbtn" data-a="moveAct" data-v="'+esc(a.id)+'" data-d="-1"'+(i===0?' disabled style="opacity:.35"':'')+' aria-label="Subir '+esc(a.name)+'">'+ic('up',18)+'</button><button class="iconbtn" data-a="moveAct" data-v="'+esc(a.id)+'" data-d="1"'+(i===gl-1?' disabled style="opacity:.35"':'')+' aria-label="Bajar '+esc(a.name)+'">'+ic('down',18)+'</button><button class="iconbtn" data-a="editAct" data-v="'+esc(a.id)+'" aria-label="Editar '+esc(a.name)+'">'+ic('edit',18)+'</button></div>';
+      });
     }
-    h+='<div class="arow-s" style="grid-template-columns:22px minmax(0,1fr) auto auto auto;gap:6px">'+ic(a.icon,22)+'<span style="overflow-wrap:anywhere;padding-left:6px">'+esc(a.name)+'</span><button class="iconbtn" data-a="moveAct" data-v="'+esc(a.id)+'" data-d="-1"'+(i===0?' disabled style="opacity:.35"':'')+' aria-label="Subir '+esc(a.name)+'">'+ic('up',18)+'</button><button class="iconbtn" data-a="moveAct" data-v="'+esc(a.id)+'" data-d="1"'+(i===gl-1?' disabled style="opacity:.35"':'')+' aria-label="Bajar '+esc(a.name)+'">'+ic('down',18)+'</button><button class="iconbtn" data-a="editAct" data-v="'+esc(a.id)+'" aria-label="Editar '+esc(a.name)+'">'+ic('edit',18)+'</button></div>';
   });
   h+='</div><h3>Nueva actividad</h3><input id="newName" class="field" maxlength="24" placeholder="Nombre, por ejemplo Yoga" autocomplete="off"><select id="newCat" class="field" aria-label="Categoría de la nueva actividad">'+catOptions(S.cats[0]&&S.cats[0].id)+'</select>'+iconPicker('pickIcon',ui.iconPick)+'<button class="btn" data-a="addAct">'+ic('plus',18)+'Añadir actividad</button><div class="msg" id="actMsg"></div></section>';
   h+='<section class="card stack"><h3>Categorías</h3><p class="muted small" style="margin:0">Agrupan las actividades al registrar una entrada. Cambia un nombre y toca fuera para guardarlo.</p>'+S.cats.map(function(c){
@@ -2864,7 +3219,7 @@ function render(keepScroll){
 /* ---------- editor sheet ---------- */
 function openEditor(opts){
   var e=opts.entry;
-  ed=e?{id:e.id,ts:e.ts,mood:e.mood,acts:e.acts.slice(),note:e.note||'',title:e.title||'',sc:Object.assign({},e.sc||{}),pp:(e.pp||[]).slice(),sub:(e.sub||[]).slice(),ex:e.ex,m:(e.m||[]).map(function(x){return {id:x.id,k:x.k};}),newM:[],origM:(e.m||[]).map(function(x){return x.id;})}:{id:null,ts:opts.ts||Date.now(),mood:opts.mood||0,acts:[],note:'',title:'',sc:{},pp:[],sub:[],ex:false,m:[],newM:[],origM:[]};
+  ed=e?{id:e.id,ts:e.ts,mood:e.mood,acts:e.acts.slice(),note:e.note||'',title:e.title||'',sc:Object.assign({},e.sc||{}),pp:(e.pp||[]).slice(),sub:(e.sub||[]).slice(),sl:Object.assign({},e.sl||{}),ex:e.ex,m:(e.m||[]).map(function(x){return {id:x.id,k:x.k};}),newM:[],origM:(e.m||[]).map(function(x){return x.id;})}:{id:null,ts:opts.ts||Date.now(),mood:opts.mood||0,acts:[],note:'',title:'',sc:{},pp:[],sub:[],sl:{},ex:false,m:[],newM:[],origM:[]};
   ed.confirmDel=false;
   renderSheet();$sheet.classList.add('open');
   try{lastFocus=document.activeElement;var f=$sheet.querySelector('[data-a="close"]');if(f)f.focus({preventScroll:true});}catch(e0){}
@@ -2904,7 +3259,7 @@ function saveEntry(){
   }
   var tg=ed.id?S.entries.filter(function(x){return x.id===ed.id;})[0]:S.entries[S.entries.length-1];
   if(tg){if(ed.m.length)tg.m=ed.m.map(function(x){return {id:x.id,k:x.k};});else delete tg.m;}
-  if(tg)setLinks(tg);
+  if(tg){setLinks(tg);setSleep(tg);}
   mDel((ed.origM||[]).filter(function(id){return !ed.m.some(function(x){return x.id===id;});}));
   ed.keep=true;
   save();closeEditor();render(true);
@@ -2923,7 +3278,7 @@ function doImportObj(o){
   var add=0,fresh=S.entries.every(function(e){return e.ex;});
   (o.goals||[]).forEach(function(g){if(g&&g.id&&(g.per==='week'||g.per==='month')&&g.n>=1&&!S.goals.some(function(x){return x.id===g.id;}))S.goals.push({id:String(g.id),act:String(g.act||'any'),n:Math.min(31,Math.round(g.n)),per:g.per});});
   (o.cats||[]).forEach(function(c){if(c&&c.id&&c.name&&!S.cats.some(function(x){return x.id===c.id;}))S.cats.push({id:String(c.id),name:String(c.name).slice(0,24)});});
-  (o.acts||[]).forEach(function(a){if(a&&a.id&&a.name&&!actById(a.id))S.acts.push({id:String(a.id),name:String(a.name).slice(0,24),icon:ICONS[a.icon]?a.icon:'heart',cat:S.cats.some(function(x){return x.id===a.cat;})?a.cat:'otras'});touch();});
+  (o.acts||[]).forEach(function(a){if(!a||!a.id||!a.name)return;var x=actById(a.id);if(!x){x={id:String(a.id),name:String(a.name).slice(0,24),icon:ICONS[a.icon]?a.icon:'heart',cat:S.cats.some(function(c){return c.id===a.cat;})?a.cat:'otras'};S.acts.push(x);}if(a.conn&&!x.conn)x.conn=true;if(a.sleep&&!x.sleep)x.sleep=true;if((a.stress===1||a.stress===-1)&&!x.stress)x.stress=a.stress;touch();});
   (o.acts||[]).forEach(function(a){var x=a&&a.id?actById(String(a.id)):null;if(x&&a.conn)x.conn=true;});
   (o.people||[]).forEach(function(p){if(p&&p.id&&p.name&&!persById(String(p.id)))S.people.push({id:String(p.id),name:String(p.name).slice(0,30),color:/^#[0-9a-fA-F]{6}$/.test(p.color)?p.color:PCOL[5],note:String(p.note||'').slice(0,1000)});});
   (o.subs||[]).forEach(function(s){if(s&&s.id&&s.name&&s.parent&&!subById(String(s.id)))S.subs.push({id:String(s.id),parent:String(s.parent),name:String(s.name).slice(0,24),icon:ICONS[s.icon]?s.icon:'star'});});
@@ -2952,6 +3307,7 @@ function doImportObj(o){
       if(e.scales)ne.scales=String(e.scales).slice(0,200);
       if(Array.isArray(e.pp)){var pq=e.pp.map(String).slice(0,30);if(pq.length)ne.pp=pq;}
       if(Array.isArray(e.sub)){var sq=e.sub.map(String).slice(0,30);if(sq.length)ne.sub=sq;}
+      if(e.sl&&typeof e.sl==='object'){var sl0={};if(e.sl.h>0&&e.sl.h<=16)sl0.h=Math.round(e.sl.h*10)/10;if(e.sl.q>=1&&e.sl.q<=5)sl0.q=Math.round(e.sl.q);if(['e','n','l'].indexOf(e.sl.t)>-1)sl0.t=e.sl.t;if(Object.keys(sl0).length)ne.sl=sl0;}
       if(Array.isArray(e.m)){var mm=e.m.filter(function(x){return x&&x.id;}).slice(0,40).map(function(x){return {id:String(x.id),k:x.k==='v'?'v':'i'};});if(mm.length)ne.m=mm;}
       if(e.sc&&typeof e.sc==='object'&&!Array.isArray(e.sc)){
         Object.keys(e.sc).forEach(function(k){var sv=Math.round(+e.sc[k]);if(sv>=1&&sv<=5&&scById(k)){ne.sc=ne.sc||{};ne.sc[k]=sv;}});
@@ -3235,6 +3591,28 @@ document.addEventListener('click',function(ev){
       break;}
     case 'impDy':{var dt=document.getElementById('dyArea').value;if(!dt.trim()){ui.dyMsg='Pega primero el contenido del CSV.';}else doDaylio(dt);render(true);break;}
     case 'imp':{var t=document.getElementById('impArea').value.trim();if(!t){ui.msg='Pega primero el texto de la copia.';}else doImport(t);render(true);afterImport();break;}
+    case 'cmdPal':openCmdPal();break;
+    case 'cmdClose':closeCmdPal();break;
+    case 'cmdExec':{var citems=getCmdItems(ui.cmdQ),it=citems[+el.getAttribute('data-i')];execCmdItem(it);break;}
+    case 'editHome':openHomeEditor();break;
+    case 'toggleWgt':{
+      var curW=userWidgets(),wpos=curW.indexOf(v);
+      if(wpos>-1){if(curW.length>1)curW.splice(wpos,1);else alert('Debe quedar al menos un widget.');}
+      else curW.push(v);
+      S.widgets=curW;save();renderHomeEditor();render(true);break;}
+    case 'moveWgt':{
+      var curW2=userWidgets(),pos=curW2.indexOf(v),d=+el.getAttribute('data-d'),npos=pos+d;
+      if(pos>-1&&npos>=0&&npos<curW2.length){
+        var tmp=curW2[pos];curW2[pos]=curW2[npos];curW2[npos]=tmp;
+        S.widgets=curW2;save();renderHomeEditor();render(true);
+      }
+      break;}
+    case 'resetWgt':delete S.widgets;save();renderHomeEditor();render(true);break;
+    case 'foldCat':{ui.catsOpen[v]=(ui.catsOpen[v]===false);render(true);break;}
+    case 'actFoldAll':{
+      var fold=+v===1;
+      S.cats.forEach(function(c){ui.catsOpen[c.id]=!fold;});
+      render(true);break;}
     case 'wipe':
       if(!ui.wipe){ui.wipe=true;render(true);}
       else{mClear();clearInterval(pTimer);pTimer=0;S={v:1,skin:S.skin,acts:defActs(),cats:defCats(),entries:[],goals:[],scales:[],people:[],subs:[],subjects:[],teachers:[],classes:[],events:[],absences:[],sessions:[],pomo:{},sched:{ab:false,days:5,ref:Date.now()},reminder:{on:false,time:'21:00'}};pomoEnsure();faceCache={};applyPalette();save();ui.wipe=false;document.title='Mareas';ui.exp='';ui.dyMsg='';ui.msg='Datos borrados.';render();}
@@ -3295,9 +3673,90 @@ document.addEventListener('change',function(ev){
     r.readAsText(t.files[0],'utf-8');
   }
 });
+document.addEventListener('input',function(ev){
+  if(ev.target&&ev.target.id==='cmdInput'){
+    ui.cmdQ=ev.target.value;
+    ui.cmdSel=0;
+    renderCmdPal();
+    var inp2=document.getElementById('cmdInput');
+    if(inp2){inp2.focus();inp2.selectionStart=inp2.selectionEnd=inp2.value.length;}
+  }
+});
 document.addEventListener('keydown',function(ev){
-  if($lb.classList.contains('open')){if(ev.key==='Escape')closeLb();else if(ev.key==='ArrowLeft')lbGo(-1);else if(ev.key==='ArrowRight')lbGo(1);return;}
-  if(ev.key==='Escape'&&(ed||fo||$sheet.classList.contains('open')))closeEditor();
+  // Manejo de lightbox
+  if($lb.classList.contains('open')){
+    if(ev.key==='Escape')closeLb();
+    else if(ev.key==='ArrowLeft')lbGo(-1);
+    else if(ev.key==='ArrowRight')lbGo(1);
+    return;
+  }
+
+  // Manejo de paleta de comandos activa
+  if($cmdPal&&$cmdPal.classList.contains('open')){
+    var items=getCmdItems(ui.cmdQ);
+    if(ev.key==='Escape'){ev.preventDefault();closeCmdPal();return;}
+    if(ev.key==='ArrowDown'){
+      ev.preventDefault();
+      if(items.length){ui.cmdSel=(ui.cmdSel+1)%items.length;renderCmdPal();var el=document.getElementById('cmdInput');if(el)el.focus();}
+      return;
+    }
+    if(ev.key==='ArrowUp'){
+      ev.preventDefault();
+      if(items.length){ui.cmdSel=(ui.cmdSel-1+items.length)%items.length;renderCmdPal();var el2=document.getElementById('cmdInput');if(el2)el2.focus();}
+      return;
+    }
+    if(ev.key==='Enter'){
+      ev.preventDefault();
+      if(items.length&&items[ui.cmdSel]){execCmdItem(items[ui.cmdSel]);}
+      return;
+    }
+  }
+
+  // Cerrar editor / formulario con Escape
+  if(ev.key==='Escape'&&(ed||fo||$sheet.classList.contains('open'))){closeEditor();return;}
+
+  // Atajos con modificador Cmd o Ctrl
+  var isMod=ev.metaKey||ev.ctrlKey;
+  if(isMod){
+    var k=ev.key.toLowerCase();
+    // Cmd/Ctrl + K: Paleta de comandos y búsqueda global
+    if(k==='k'){
+      ev.preventDefault();
+      if($cmdPal.classList.contains('open'))closeCmdPal();
+      else openCmdPal();
+      return;
+    }
+    // Cmd/Ctrl + N: Nueva entrada rápida
+    if(k==='n'){
+      ev.preventDefault();
+      if($cmdPal.classList.contains('open'))closeCmdPal();
+      openEditor({});
+      return;
+    }
+  }
+
+  // Teclas numéricas 1-5: Asignación rápida de nivel de ánimo
+  // Solo cuando no estemos escribiendo en inputs, textareas o selects
+  var tag=(ev.target&&ev.target.tagName)?ev.target.tagName.toLowerCase():'';
+  var isEditing=tag==='input'||tag==='textarea'||tag==='select'||(ev.target&&ev.target.isContentEditable);
+  if(!isEditing&&!ev.metaKey&&!ev.ctrlKey&&!ev.altKey){
+    if(ev.key>='1'&&ev.key<='5'){
+      var moodNum=+ev.key;
+      // Si el editor de entrada está abierto, asignar el ánimo en el editor
+      if(ed&&$sheet.classList.contains('open')){
+        ev.preventDefault();
+        ed.mood=moodNum;
+        $sheet.querySelectorAll('[data-a="mood"]').forEach(function(b){b.classList.toggle('sel',b.getAttribute('data-v')===String(moodNum));});
+        return;
+      }
+      // Si estamos en cualquier pantalla, abrir registro rápido con ese ánimo
+      if(!ed&&!fo&&!$sheet.classList.contains('open')&&!$cmdPal.classList.contains('open')){
+        ev.preventDefault();
+        openEditor({mood:moodNum});
+        return;
+      }
+    }
+  }
 });
 
 setInterval(function(){
@@ -3312,6 +3771,7 @@ if(!Array.isArray(S.teachers))S.teachers=[];
 if(!Array.isArray(S.classes))S.classes=[];
 if(!Array.isArray(S.events))S.events=[];
 if(!Array.isArray(S.absences))S.absences=[];
+if(!Array.isArray(S.widgets))S.widgets=defWidgets();
 if(!S.sched||typeof S.sched!=='object')S.sched={ab:false,days:5,ref:Date.now()};
 pomoEnsure();
 if(migrateScales())save();

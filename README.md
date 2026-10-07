@@ -45,6 +45,9 @@ Mareas es una aplicación web (PWA) para registrar cómo te sientes día a día 
 ### 🧠 Estado anímico y conexiones
 - **Estado anímico:** análisis de 7 días, 30 días o 3 meses con diagnóstico (nivel, tendencia, estabilidad, rachas bajas, escalas, carga escolar, día más bajo), avisos y pautas concretas para mejorar. Es orientativo, no un diagnóstico clínico.
 - **Acciones avanzadas → Conexiones:** vincula una acción (por ejemplo Amigos, también tras importar de Daylio) y, al elegirla en una entrada, se despliega la lista de personas con las que has estado ese día.
+- **Marea e Índice de Consistencia:** en lugar de una racha estricta, mide el porcentaje de días con registro en los últimos 30 días móviles. Saltarte un día solo baja el índice unos puntos. Estados: Marea viva, creciente, baja y calma.
+- **Acción avanzada Sueño:** al elegir la acción vinculada pregunta horas dormidas, calidad y si te acostaste temprano, tarde o como siempre, y lo analiza junto a tu ánimo (Estadísticas y Estado anímico).
+- **Acciones que suben o bajan el estrés:** marca acciones como «+ estrés» o «− estrés» y el nivel de estrés las tiene en cuenta como un ajuste suave.
 - **Sub-acciones:** detalle derivado de una acción principal (Ejercicio → Correr, Gimnasio…).
 - **Personas:** menú aparte con estadísticas por persona y insights como «¡Estar con Mariano hace que estés un +12% más feliz!» (ánimo con y sin esa persona; muestra relación, no causa).
 
