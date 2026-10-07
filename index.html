@@ -814,7 +814,7 @@ function defCats(){return DEFAULT_CATS.map(function(c){return {id:c[0],name:c[1]
 var S=null, memOnly=false;
 function load(){try{var r=localStorage.getItem(KEY);if(r){var o=JSON.parse(r);if(o&&Array.isArray(o.entries)&&Array.isArray(o.acts))return o;}}catch(e){}return null;}
 var ver=0;function touch(){ver++;}
-function save(){touch();S.t=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){memOnly=true;}kvSchedule();}
+function save(){touch();S.t=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){memOnly=true;}kvSchedule();syncSchedule();}
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 function seed(){
   var rnd=mulberry(11),now=Date.now(),out=[];
@@ -1897,6 +1897,211 @@ document.addEventListener('click',function(ev){
   }
 });
 
+/* ---------- fase 4: nube con Supabase (cuenta + sincronización entre dispositivos) ---------- */
+var SBU='https://ezcqgjilbcuwrbduuaid.supabase.co',SBK='sb_publishable_4l8yeUwVxCr-nX1nXahuaw_BtU9V3nD',SBS='mareas.sb',SYS='mareas.sync',MAXUP=45*1024*1024,SYBUSY=false,SYT=0;
+function sbLoad(){try{return JSON.parse(localStorage.getItem(SBS)||'null');}catch(e){return null;}}
+function sbStore(o){try{if(o)localStorage.setItem(SBS,JSON.stringify(o));else localStorage.removeItem(SBS);}catch(e){}}
+function SYM(){var m=null;try{m=JSON.parse(localStorage.getItem(SYS)||'null');}catch(e){}return Object.assign({rev:0,hash:'',auto:true,up:{},last:0,uid:''},m||{});}
+function SYMsave(m){try{localStorage.setItem(SYS,JSON.stringify(m));}catch(e){}}
+function cloudSay(t){ui.cloudMsg=t;var x=document.getElementById('cloudMsg');if(x)x.textContent=t;}
+function cloudErr(e){
+  var m=String(e&&e.message||e);
+  if(/Invalid login/i.test(m))return 'Correo o contraseña incorrectos.';
+  if(/already (been )?registered/i.test(m))return 'Ese correo ya tiene cuenta: pulsa Entrar.';
+  if(/not confirmed/i.test(m))return 'Falta confirmar el correo. Revisa tu bandeja de entrada.';
+  if(/rate limit|too many|over_email/i.test(m))return 'Demasiados intentos o correos enviados. Espera unos minutos.';
+  if(/Failed to fetch|NetworkError|Load failed/i.test(m))return 'Sin conexión con el servidor.';
+  return 'Error: '+m.slice(0,140);
+}
+async function sbAuth(path,body,token){
+  var r=await fetch(SBU+'/auth/v1/'+path,{method:body&&body.__put?'PUT':'POST',headers:{apikey:SBK,'Content-Type':'application/json',Authorization:'Bearer '+(token||SBK)},body:JSON.stringify(body)});
+  var j={};try{j=await r.json();}catch(e){}
+  if(!r.ok)throw new Error(j.msg||j.error_description||j.message||('Error '+r.status));
+  return j;
+}
+function sbSet(j,prev){
+  var u=j.user||{},o={at:j.access_token,rt:j.refresh_token,exp:Date.now()+(j.expires_in||3600)*1000-60000,uid:u.id||(prev&&prev.uid)||'',email:u.email||(prev&&prev.email)||''};
+  sbStore(o);return o;
+}
+async function sbToken(){
+  var s=sbLoad();if(!s)throw new Error('Sin sesión');
+  if(Date.now()<s.exp)return s;
+  return sbSet(await sbAuth('token?grant_type=refresh_token',{refresh_token:s.rt}),s);
+}
+async function sbRest(path,opt){
+  var s=await sbToken(),o=opt||{},r=await fetch(SBU+'/rest/v1/'+path,{method:o.method||'GET',body:o.body,headers:{apikey:SBK,Authorization:'Bearer '+s.at,'Content-Type':'application/json'}});
+  if(!r.ok){var t='';try{t=await r.text();}catch(e){}throw new Error('Servidor '+r.status+' '+t.slice(0,100));}
+  return r.status===204?null:r.json();
+}
+async function sha(s){var b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return Array.prototype.map.call(new Uint8Array(b),function(x){return ('0'+x.toString(16)).slice(-2);}).join('');}
+function cloudDev(){return (navigator.userAgentData&&navigator.userAgentData.platform)||navigator.platform||'web';}
+function hasLocal(){return S.entries.some(function(e){return !e.ex;})||S.subjects.length>0||S.events.length>0||S.people.length>0;}
+function cloudPayload(){var d=packData();['skin','notif','pomoRun','t'].forEach(function(k){delete d[k];});return d;}
+function inputFocused(){var a=document.activeElement;return !!(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName));}
+/* cuenta */
+async function cloudLogin(mode){
+  var em=(document.getElementById('sbEmail').value||'').trim(),pw=document.getElementById('sbPass').value||'';
+  if(!/^\S+@\S+\.\S+$/.test(em)||pw.length<6){cloudSay('Escribe un correo válido y una contraseña de al menos 6 caracteres.');return;}
+  cloudSay(mode==='new'?'Creando cuenta…':'Entrando…');
+  try{
+    var j=await sbAuth(mode==='new'?'signup':'token?grant_type=password',{email:em,password:pw});
+    if(!j.access_token){cloudSay('Cuenta creada. Revisa tu correo, confirma la cuenta y vuelve a pulsar Entrar.');return;}
+    cloudStart(sbSet(j));
+  }catch(e){cloudSay(cloudErr(e));}
+}
+function cloudStart(s){
+  var m=SYM();if(m.uid!==s.uid){m={rev:0,hash:'',auto:true,up:{},last:0,uid:s.uid};SYMsave(m);}
+  ui.cloudMsg='';render(true);syncNow(false);
+}
+async function cloudForgot(){
+  var em=(document.getElementById('sbEmail').value||'').trim();
+  if(!/^\S+@\S+\.\S+$/.test(em)){cloudSay('Escribe tu correo arriba y pulsa de nuevo.');return;}
+  try{await sbAuth('recover?redirect_to='+encodeURIComponent(location.origin+location.pathname),{email:em});cloudSay('Si el correo existe, te hemos enviado un enlace para crear una contraseña nueva.');}
+  catch(e){cloudSay(cloudErr(e));}
+}
+async function cloudSetPass(){
+  var pw=document.getElementById('sbNew').value||'';
+  if(pw.length<6){cloudSay('La contraseña debe tener al menos 6 caracteres.');return;}
+  try{var s=await sbToken();await sbAuth('user',{password:pw,__put:1},s.at);ui.recovery=false;cloudSay('Contraseña cambiada.');render(true);syncNow(false);}
+  catch(e){cloudSay(cloudErr(e));}
+}
+async function cloudLogout(){
+  var s=sbLoad();
+  try{if(s)await fetch(SBU+'/auth/v1/logout',{method:'POST',headers:{apikey:SBK,Authorization:'Bearer '+s.at}});}catch(e){}
+  sbStore(null);try{localStorage.removeItem(SYS);}catch(e1){}
+  ui.syConflict=null;ui.syAsk='';cloudSay('Sesión cerrada. Los datos siguen en este dispositivo.');render(true);
+}
+/* medios: fotos y vídeos en Storage, carpeta del usuario */
+async function sbUp(s,id,blob,k){
+  var r=await fetch(SBU+'/storage/v1/object/mareas-media/'+s.uid+'/'+encodeURIComponent(id),{method:'POST',headers:{apikey:SBK,Authorization:'Bearer '+s.at,'x-upsert':'true','Content-Type':blob.type||(k==='v'?'video/mp4':'image/jpeg')},body:blob});
+  return r.ok;
+}
+async function sbDown(s,id){
+  var r=await fetch(SBU+'/storage/v1/object/authenticated/mareas-media/'+s.uid+'/'+encodeURIComponent(id),{headers:{apikey:SBK,Authorization:'Bearer '+s.at}});
+  return r.ok?r.blob():null;
+}
+function putRemoteMedia(b,id,k){
+  return new Promise(function(done){
+    var rec={id:id,k:k==='v'?'v':'i',type:b.type||'',name:'',blob:b,size:b.size,w:0,dur:0};
+    var fin=function(th){mPut(rec,th,function(ok){if(ok){if(th)MDB.th[id]=URL.createObjectURL(th);else delete MDB.th[id];}done(ok);});};
+    if(rec.k==='i')loadImg(b,function(src,w,h,free){if(!src){fin(null);return;}canvasBlob(src,w,h,360,.75,function(t){free();fin(t);});});
+    else procVideo(b,function(x){fin(x.thumb);});
+  });
+}
+async function syncMedia(){
+  var s=await sbToken(),m=SYM(),ids={},res={u:0,d:0,big:0,err:0};
+  S.entries.forEach(function(e){(e.m||[]).forEach(function(x){ids[x.id]=x.k;});});
+  var list=Object.keys(ids);
+  for(var i=0;i<list.length;i++){
+    var id=list[i],loc=await new Promise(function(r){mGet('m',id,r);});
+    if(loc&&loc.blob){
+      if(m.up[id])continue;
+      if(loc.blob.size>MAXUP){res.big++;continue;}
+      if(await sbUp(s,id,loc.blob,loc.k)){m.up[id]=1;res.u++;}else res.err++;
+    }else{
+      var b=await sbDown(s,id);
+      if(b&&await putRemoteMedia(b,id,ids[id])){m.up[id]=1;res.d++;}else res.err++;
+    }
+    if((i+1)%5===0){SYMsave(m);cloudSay('Fotos y vídeos: '+(i+1)+' de '+list.length+'…');}
+  }
+  SYMsave(m);return res;
+}
+/* datos */
+function applyRemote(d){
+  var keep={skin:S.skin,notif:S.notif};
+  try{clearInterval(pTimer);pTimer=0;}catch(e0){}
+  d.entries=Array.isArray(d.entries)?d.entries:[];d.acts=Array.isArray(d.acts)?d.acts:[];
+  S=d;S.v=1;if(keep.skin)S.skin=keep.skin;if(keep.notif)S.notif=keep.notif;
+  try{pomoEnsure();}catch(e1){}
+  normalize();faceCache={};applySkin();applyPalette();save();render(true);
+}
+async function cloudPush(base,str,h){
+  var rev=await sbRest('rpc/push_state',{method:'POST',body:'{"p_data":'+str+',"p_base":'+base+',"p_device":'+JSON.stringify(cloudDev())+'}'});
+  if(rev===-1)return false;
+  var m=SYM();m.rev=rev;m.hash=h;SYMsave(m);return true;
+}
+async function cloudPull(){
+  var row=(await sbRest('mareas_state?select=data,rev'))[0];if(!row)throw new Error('La nube está vacía.');
+  applyRemote(row.data);
+  var m=SYM();m.rev=row.rev;m.hash=await sha(JSON.stringify(cloudPayload()));SYMsave(m);
+}
+async function cloudMerge(){
+  var row=(await sbRest('mareas_state?select=data,rev'))[0];if(!row)throw new Error('La nube está vacía.');
+  doImportObj({mareasPack:1,data:row.data,media:[]});ui.pm=null;normalize();save();
+  var str=JSON.stringify(cloudPayload());
+  if(!(await cloudPush(row.rev,str,await sha(str))))throw new Error('Otro dispositivo cambió la nube a la vez. Vuelve a intentarlo.');
+}
+async function cloudForce(){
+  var rows=await sbRest('mareas_state?select=rev'),str=JSON.stringify(cloudPayload());
+  if(!(await cloudPush(rows[0]?rows[0].rev:0,str,await sha(str))))throw new Error('Otro dispositivo cambió la nube a la vez. Vuelve a intentarlo.');
+}
+async function syncNow(auto){
+  if(SYBUSY||!sbLoad())return;
+  if(auto&&(ed||fo||inputFocused()))return;
+  SYBUSY=true;cloudSay('Sincronizando…');
+  try{
+    var m=SYM(),rem=(await sbRest('mareas_state?select=rev,updated_at,device'))[0]||null,str=JSON.stringify(cloudPayload()),h=await sha(str),changed=h!==m.hash,conflict=null;
+    if(!rem){await cloudPush(0,str,h);}
+    else if(rem.rev===m.rev){if(changed&&!(await cloudPush(m.rev,str,h)))conflict=rem;}
+    else if((!changed&&m.rev>0)||(m.rev===0&&!hasLocal())){await cloudPull();}
+    else conflict=rem;
+    if(conflict){ui.syConflict=conflict;ui.syAsk='';cloudSay('Hay cambios distintos en la nube y en este dispositivo. Elige qué hacer.');}
+    else{
+      ui.syConflict=null;
+      var r=await syncMedia();m=SYM();m.last=Date.now();SYMsave(m);
+      cloudSay('Sincronizado a las '+F_TIME.format(new Date())+(r.u||r.d?' · '+r.u+' subidos, '+r.d+' descargados':'')+(r.big?' · '+r.big+' vídeos de más de 45 MB sin subir':'')+(r.err?' · '+r.err+' archivos pendientes':'')+'.');
+    }
+  }catch(e){cloudSay(cloudErr(e));}
+  SYBUSY=false;
+  if(ui.tab==='set'&&!inputFocused())render(true);
+}
+async function cloudResolve(v){
+  if(v!=='merge'&&ui.syAsk!==v){ui.syAsk=v;render(true);return;}
+  if(SYBUSY)return;SYBUSY=true;cloudSay('Aplicando…');
+  try{
+    if(v==='merge')await cloudMerge();else if(v==='cloud')await cloudPull();else await cloudForce();
+    ui.syConflict=null;ui.syAsk='';SYBUSY=false;await syncNow(false);return;
+  }catch(e){cloudSay(cloudErr(e));}
+  SYBUSY=false;render(true);
+}
+async function cloudWipe(){
+  if(ui.syAsk!=='wipe'){ui.syAsk='wipe';render(true);return;}
+  ui.syAsk='';cloudSay('Borrando la copia de la nube…');
+  try{
+    var s=await sbToken();await sbRest('mareas_state?user_id=eq.'+s.uid,{method:'DELETE'});
+    var l=await (await fetch(SBU+'/storage/v1/object/list/mareas-media',{method:'POST',headers:{apikey:SBK,Authorization:'Bearer '+s.at,'Content-Type':'application/json'},body:JSON.stringify({prefix:s.uid+'/',limit:1000})})).json();
+    if(Array.isArray(l)&&l.length)await fetch(SBU+'/storage/v1/object/mareas-media',{method:'DELETE',headers:{apikey:SBK,Authorization:'Bearer '+s.at,'Content-Type':'application/json'},body:JSON.stringify({prefixes:l.map(function(x){return s.uid+'/'+x.name;})})});
+    var m=SYM();m.rev=0;m.hash='';m.up={};SYMsave(m);cloudSay('Copia de la nube borrada. Tus datos siguen en este dispositivo.');
+  }catch(e){cloudSay(cloudErr(e));}
+  render(true);
+}
+function syncSchedule(){
+  try{if(typeof SBU==='undefined'||!sbLoad()||!SYM().auto)return;clearTimeout(SYT);SYT=setTimeout(function(){syncNow(true);},20000);}catch(e){}
+}
+function cloudCard(){
+  var s=sbLoad(),h='<section class="card stack"><h3>Nube y sincronización</h3>';
+  if(ui.recovery)return h+'<p class="muted small" style="margin:0">Elige una contraseña nueva para tu cuenta.</p><input id="sbNew" class="field" type="password" placeholder="Contraseña nueva (mín. 6)" autocomplete="new-password"><div><button class="btn sm" data-a="cloudNewPass">Guardar contraseña</button></div><div class="msg" id="cloudMsg" role="status">'+esc(ui.cloudMsg||'')+'</div></section>';
+  if(!s)return h+'<p class="muted small" style="margin:0">Crea una cuenta gratuita para tener tus datos, fotos y vídeos en todos tus dispositivos. Cada cuenta solo puede ver sus propios datos. No están cifrados de extremo a extremo.</p><input id="sbEmail" class="field" type="email" placeholder="Correo" autocomplete="email" inputmode="email"><input id="sbPass" class="field" type="password" placeholder="Contraseña (mín. 6)" autocomplete="current-password"><div class="row" style="flex-wrap:wrap"><button class="btn sm" data-a="cloudIn">Entrar</button><button class="btn sm ghost" data-a="cloudNew">Crear cuenta</button><button class="btn sm ghost" data-a="cloudForgot">He olvidado la contraseña</button></div><div class="msg" id="cloudMsg" role="status">'+esc(ui.cloudMsg||'')+'</div></section>';
+  var m=SYM(),c=ui.syConflict,q=ui.syAsk;
+  h+='<p class="small" style="margin:0"><b>Conectado como</b> '+esc(s.email||'—')+'</p><p class="muted small" style="margin:0">'+(m.last?'Última sincronización: '+esc(dayLabel(dkey(m.last))+', '+F_TIME.format(new Date(m.last))):'Aún no se ha sincronizado.')+' · Automática: '+(m.auto?'sí':'no')+'</p>';
+  if(c)h+='<div class="stack" style="border:1px solid var(--danger);border-radius:12px;padding:12px"><b>Conflicto</b><span class="small">La nube cambió desde otro dispositivo ('+esc(c.device||'desconocido')+', '+esc(c.updated_at?new Date(c.updated_at).toLocaleString('es'):'')+') y aquí también hay cambios.</span><div class="row" style="flex-wrap:wrap"><button class="btn sm" data-a="cloudRes" data-v="merge">Combinar (recomendado)</button><button class="btn sm danger" data-a="cloudRes" data-v="cloud">'+(q==='cloud'?'Confirmar: usar la nube':'Usar la nube')+'</button><button class="btn sm danger" data-a="cloudRes" data-v="device">'+(q==='device'?'Confirmar: usar este dispositivo':'Usar este dispositivo')+'</button></div><span class="muted small">Combinar añade lo que falte a ambos lados pero no propaga borrados ni ediciones de elementos que ya existen en los dos. Las otras dos opciones sobrescriben un lado.</span></div>';
+  h+='<div class="row" style="flex-wrap:wrap"><button class="btn sm" data-a="cloudSync">Sincronizar ahora</button><button class="btn sm ghost" data-a="cloudAuto">'+(m.auto?'Desactivar automática':'Activar automática')+'</button><button class="btn sm ghost" data-a="cloudOut">Cerrar sesión</button></div><p class="muted small" style="margin:0">Se sincroniza todo menos el estilo visual y las notificaciones de cada dispositivo. Los vídeos de más de 45 MB no se suben. Si borras algo en un dispositivo, el borrado no se copia a los demás.</p><div><button class="btn sm danger" data-a="cloudWipe">'+(q==='wipe'?'Confirmar: borrar mi copia de la nube':'Borrar mi copia de la nube')+'</button></div><div class="msg" id="cloudMsg" role="status">'+esc(ui.cloudMsg||'')+'</div></section>';
+  return h;
+}
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&sbLoad()&&SYM().auto&&Date.now()-SYM().last>120000)syncNow(true);});
+window.addEventListener('online',function(){if(sbLoad()&&SYM().auto)syncNow(true);});
+setTimeout(function(){if(sbLoad()&&SYM().auto)syncNow(true);},3500);
+/* al volver de un enlace de confirmación o de recuperación del correo */
+(async function(){
+  var hs=location.hash.replace(/^#/,'');if(hs.indexOf('access_token=')<0)return;
+  var p=new URLSearchParams(hs);try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
+  try{
+    var at=p.get('access_token'),u=await (await fetch(SBU+'/auth/v1/user',{headers:{apikey:SBK,Authorization:'Bearer '+at}})).json();
+    var s=sbSet({access_token:at,refresh_token:p.get('refresh_token'),expires_in:+p.get('expires_in')||3600,user:u});
+    if(p.get('type')==='recovery'){ui.recovery=true;ui.tab='set';render();}else cloudStart(s);
+  }catch(e1){}
+})();
+
 /* ---------- ui state ---------- */
 var ui={days:20,delSc:null,dyMsg:'',delCat:null,delGoal:null,remShown:false,fq:'',fm:[],fa:'',fx:false,calMode:'month',editAct:null,edIcon:'heart',tab:'home',range:30,calY:new Date().getFullYear(),calM:new Date().getMonth(),calSel:dkey(Date.now()),exp:'',expFmt:'',msg:'',iconPick:'heart',wipe:false,delAct:null,schView:'day',schWk:null,schDay:null,pm:null,agView:'pend',agDay:dkey(Date.now()),perSel:null,moodRange:30,packMsg:'',packConfirm:false,delSub:null};
 
@@ -2605,6 +2810,7 @@ function toCSV(){
 function vSet(){
   var h=backBar('Ajustes','more');
   h+=packCard();
+  h+=cloudCard();
   h+=appearanceCard();
   h+='<section class="card stack"><h3>Actividades</h3><div>';
   var flat=[];actsByCat().forEach(function(g){g.acts.forEach(function(a,j){flat.push({a:a,g:g,j:j});});});
@@ -2888,6 +3094,15 @@ document.addEventListener('click',function(ev){
     case 'zipCancel':ZP=null;ui.zipMsg='';render(true);break;
     case 'nToggle':{var nn=NS();if(nn.on){nn.on=false;ui.nMsg='Avisos desactivados.';save();render(true);}else askNotif(function(p){nn.on=(p==='granted');ui.nMsg=notifMsg(p);save();render(true);});break;}
     case 'nTest':askNotif(function(p){ui.nMsg=p==='granted'?(appNotify('Mareas','Las notificaciones funcionan correctamente.','mareas-test')?'Prueba enviada. Si no la ves, revisa el modo No molestar o Concentración del sistema.':'No se pudo enviar la prueba.'):notifMsg(p);render(true);});break;
+    case 'cloudIn':cloudLogin('in');break;
+    case 'cloudNew':cloudLogin('new');break;
+    case 'cloudForgot':cloudForgot();break;
+    case 'cloudNewPass':cloudSetPass();break;
+    case 'cloudOut':cloudLogout();break;
+    case 'cloudSync':syncNow(false);break;
+    case 'cloudAuto':{var am=SYM();am.auto=!am.auto;SYMsave(am);render(true);break;}
+    case 'cloudRes':cloudResolve(v);break;
+    case 'cloudWipe':cloudWipe();break;
     case 'newCls':openCls(null,+v);break;
     case 'editCls':openCls(v,0);break;
     case 'fDay':{readCls();var di=fo.days.indexOf(+v);if(fo.id)fo.days=[+v];else if(di>-1){if(fo.days.length>1)fo.days.splice(di,1);}else fo.days.push(+v);renderForm();break;}

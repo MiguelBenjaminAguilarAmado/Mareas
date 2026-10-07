@@ -1,7 +1,7 @@
 # 🌊 Mareas
 
 **Diario de ánimo + agenda escolar en una sola página.**
-Sin servidor, sin dependencias, sin cuentas. Tus datos se quedan en tu dispositivo.
+Sin dependencias. Tus datos se quedan en tu dispositivo, y si quieres puedes sincronizarlos entre dispositivos con una cuenta gratuita.
 
 🔗 **Pruébala:** https://miguelbenjaminaguilaramado.github.io/Mareas/
 
@@ -67,12 +67,24 @@ Además hay tres paletas de ánimo (Marea, Semáforo, Pastel), nombres de nivel 
 ## 🔒 Privacidad y datos
 
 - Todo se guarda en el navegador: `localStorage` para los datos y `IndexedDB` para fotos y vídeos, con una segunda copia interna de seguridad.
-- No se envía nada a ningún servidor.
+- Sin cuenta, no se envía nada a ningún servidor.
+- **Nube opcional (Supabase):** con una cuenta, los datos, fotos y vídeos se sincronizan entre tus dispositivos. Cada cuenta solo ve sus propios datos (seguridad a nivel de fila) y no están cifrados de extremo a extremo.
 - **Notificaciones** opcionales (Pomodoro, recordatorio diario y agenda). Se piden con el permiso nativo del navegador y solo llegan con la app abierta o en segundo plano.
 - **Exportar:** copia JSON, CSV o copia completa con fotos y vídeos.
 - **Importar:** copias de Mareas y archivos CSV exportados desde **Daylio**.
 
 > ⚠️ Si borras los datos del sitio o cambias de dispositivo, se perderán. Descarga una copia de seguridad de vez en cuando.
+
+## ☁️ Nube y sincronización
+
+En **Ajustes → Nube y sincronización** puedes crear una cuenta (correo y contraseña) y entrar desde cualquier dispositivo.
+
+- Se sincroniza todo (entradas, actividades, personas, agenda escolar, ajustes…) salvo el estilo visual y las notificaciones de cada dispositivo. Las fotos y los vídeos de hasta 45 MB también suben a tu carpeta privada.
+- La sincronización es automática (opcional) y detecta conflictos con un número de revisión: si dos dispositivos cambian a la vez, eliges entre combinar, usar la nube o usar el dispositivo.
+- **Combinar** añade lo que falte, pero no propaga borrados ni ediciones de elementos que existen en los dos lados.
+- La clave `sb_publishable_…` del código es pública por diseño: lo que protege los datos son las políticas de seguridad a nivel de fila de la base de datos.
+
+**¿Quieres tu propia nube?** Crea un proyecto en [Supabase](https://supabase.com), ejecuta [`supabase/schema.sql`](supabase/schema.sql) en su editor SQL y cambia `SBU` y `SBK` en `index.html`. En *Authentication → URL Configuration* pon la dirección de tu página como *Site URL* para que funcionen los enlaces de confirmación y de recuperación de contraseña.
 
 ## 🛠️ Tecnología
 
@@ -80,6 +92,7 @@ Además hay tres paletas de ánimo (Marea, Semáforo, Pastel), nombres de nivel 
 - Iconos SVG propios en un sprite único.
 - Service Worker con caché para funcionar sin conexión.
 - Web App Manifest para la instalación como app.
+- Supabase (autenticación, PostgreSQL y Storage) consumido con `fetch`, sin librerías.
 
 ## 👤 Autor
 
