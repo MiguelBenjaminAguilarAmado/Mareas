@@ -1063,7 +1063,7 @@ function offDate(off){var n=new Date();return new Date(n.getFullYear(),n.getMont
 function stScale(){return S.scales.filter(function(c){return /estr[eé]s/i.test(c.name);})[0]||null;}
 function stCtx(){
   var evs=S.events.filter(function(x){return /^\d{4}-\d\d-\d\d$/.test(x.date);}).map(function(x){
-    var w=({exam:3,delivery:2,task:1,class:.5}[x.type]||1)*(x.prio===2?1.5:x.prio===0?.75:1);
+    var w=({exam:3,delivery:2,task:1,class:.5}[x.type]||1)*(x.prio===2?1.5:x.prio===0?.75:1)*diffMul(x.sid);
     return {x:x,w:w,ramp:x.type==='exam'?10:x.type==='delivery'?7:5,dd:dayDiff(x.date)};
   });
   var avg=dayAvg(),sc=stScale(),scAvg={};
@@ -1078,7 +1078,7 @@ function stOne(e,off){
   if(e.dd<0&&-e.dd<=14&&off>=e.dd)return e.w*.8;
   return 0;
 }
-function stLoad(c,off){var L=0;c.evs.forEach(function(e){L+=stOne(e,off);});return L;}
+function stLoad(c,off){var L=0;c.evs.forEach(function(e){L+=stOne(e,off);});L+=classLoad(offDate(off));return L;}
 function stIdx(c,off){
   var load=stLoad(c,off),ln=Math.min(1,load/6),k=dkey(offDate(off).getTime()),mv=null,part=null;
   if(off<=0)mv=c.avg[k]!==undefined?c.avg[k]:null;else mv=c.base;
@@ -1145,7 +1145,7 @@ function vStress(){
   var co=stCorr2(c);
   h+='<section class="card stack"><h3>Relación con tu ánimo</h3>'+(co?'<p style="margin:0">En los '+co.nh+' días con mucha carga tu ánimo medio fue <b>'+co.hi.toFixed(1)+'</b>; en los '+co.nl+' días tranquilos, <b>'+co.lo.toFixed(1)+'</b> (diferencia '+(co.lo-co.hi>=0?'−':'+')+Math.abs(co.lo-co.hi).toFixed(1)+').</p>':'<p class="muted" style="margin:0">Hacen falta al menos 4 días con carga alta y 4 tranquilos, con ánimo registrado, para comparar. Sigue apuntando tu ánimo.</p>')+
     '<p class="muted small" style="margin:0">Es una estimación orientativa basada en tus datos, no un diagnóstico. Muestra relación, no causa. Cómo se calcula: cada examen, entrega o tarea pendiente suma carga que crece según se acerca la fecha (examen 10 días, entrega 7, tarea 5) y según su prioridad; el 60 % del índice es carga y el 40 % tu ánimo (en previsión, el de los últimos 7 días).</p></section>';
-  h+=stressActsCard(true);
+  h+=diffStressCard()+stressActsCard(true);
   return h;
 }
 
@@ -1964,6 +1964,12 @@ document.addEventListener('click',function(ev){
   var el=ev.target.closest('[data-a]');if(!el)return;
   var a=el.getAttribute('data-a'),v=el.getAttribute('data-v');
   switch(a){
+    case 'newGr':openGrade(null,v);break;
+    case 'editGr':openGrade(v,'');break;
+    case 'grType':if(!gf)break;readGrade();gf.type=v;renderGrade();break;
+    case 'grSave':if(gf)saveGrade();break;
+    case 'grDel':if(gf)delGrade();break;
+    case 'subDiff':{var g4s=subjById(el.getAttribute('data-s'));if(g4s){if(v==='auto')delete g4s.diff;else g4s.diff=v;save();render(true);}break;}
     case 'sleepOn':{var g3s=document.getElementById('sleepSel'),g3a=g3s?actById(g3s.value):null;if(g3a){g3a.sleep=true;save();render(true);}break;}
     case 'sleepOff':{var g3o=actById(v);if(g3o){delete g3o.sleep;save();render(true);}break;}
     case 'strUp':case 'strDn':{var g3t=document.getElementById('strSel'),g3b=g3t?actById(g3t.value):null;if(g3b){g3b.stress=a==='strUp'?1:-1;save();render(true);}break;}
@@ -2347,6 +2353,111 @@ document.addEventListener('input',function(ev){
   if(!isNaN(v)&&v>=0&&v<=16)ed.sl.h=Math.round(v*10)/10;else delete ed.sl.h;
 });
 
+/* ---------- módulo académico: notas, metas, ponderación (media) y dificultad ---------- */
+var GTYPES={exam:'Examen',work:'Trabajo',other:'Otra'},DIFFN={1:'Fácil',2:'Intermedia',3:'Difícil'},gf=null;
+function GR(){if(!Array.isArray(S.grades))S.grades=[];return S.grades;}
+function fmtG(v){return num(v,2).replace(/,?0+$/,'');}
+function gcol(v){return v<5?'var(--danger)':v<7?'var(--m4)':'var(--m3)';}
+/* ponderación: por ahora solo la media simple; aquí se añadirán otros métodos */
+function subjStat(sj){
+  var l=GR().filter(function(g){return g.sid===sj.id;}).sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:0;}),sum=0;
+  l.forEach(function(g){sum+=g.score;});
+  return {l:l,n:l.length,sum:sum,avg:l.length?sum/l.length:null};
+}
+function diffOf(sj){
+  var d=sj&&sj.diff;
+  if(d==='e')return {lvl:1,auto:false};if(d==='m')return {lvl:2,auto:false};if(d==='h')return {lvl:3,auto:false};
+  var st=sj?subjStat(sj):null;
+  if(!st||!st.n)return {lvl:2,auto:true,nodata:true};
+  return {lvl:st.avg<5.5?3:st.avg<7.5?2:1,auto:true};
+}
+function diffMul(sid){var sj=sid?subjById(sid):null;return sj?({1:.8,2:1,3:1.3})[diffOf(sj).lvl]:1;}
+function classLoad(d){
+  var wd=wdayOf(d);if(wd>=S.sched.days)return 0;
+  var wk=weekFor(d),L=0;
+  S.classes.forEach(function(c){
+    var sj=subjById(c.sid);if(!sj||c.day!==wd)return;
+    if(S.sched.ab&&c.week&&c.week!==wk)return;
+    L+=(tmin(c.end)-tmin(c.start))/60*({1:.05,2:.15,3:.4})[diffOf(sj).lvl];
+  });
+  return L;
+}
+function gradesSub(){
+  var a=S.subjects.map(subjStat).filter(function(x){return x.n;}).map(function(x){return x.avg;});
+  return a.length?'Media general '+fmtG(mean(a)):'Sin notas todavía';
+}
+function goalMsg(sj,st){
+  var g=sj.goal||0,N=Math.max(1,sj.rem||1);if(!g)return '';
+  if(!st.n)return 'Para llegar a un '+fmtG(g)+' necesitas una media de '+fmtG(g)+' en tus '+N+(N===1?' evaluación':' evaluaciones')+'.';
+  var need=(g*(st.n+N)-st.sum)/N;
+  if(need<=0)return '¡Meta asegurada! Aunque sacaras un 0 en lo que queda, tu media final sería de '+fmtG(st.sum/(st.n+N))+' o más.';
+  if(need>10)return 'Con la media simple ya no se puede llegar a '+fmtG(g)+': con un 10 en lo que queda tu final sería '+fmtG((st.sum+10*N)/(st.n+N))+'.';
+  return 'Para llegar a '+fmtG(g)+' necesitas sacar de media un '+fmtG(need)+' en '+(N===1?'la evaluación que te queda':'las '+N+' evaluaciones que te quedan')+'.';
+}
+function gradeCard(sj){
+  var st=subjStat(sj),df=diffOf(sj),g=sj.goal||0,N=Math.max(1,sj.rem||1),id=esc(sj.id);
+  var h='<section class="card stack"><div class="mrow">'+subjBadge(sj)+'<span class="mid"><b>'+esc(sj.name)+'</b><span class="small muted">'+st.n+(st.n===1?' nota':' notas')+' · Dificultad: '+DIFFN[df.lvl].toLowerCase()+(df.auto?' (automática'+(df.nodata?', sin notas aún':'')+')':'')+'</span></span><span class="big" style="color:'+(st.avg===null?'var(--muted)':gcol(st.avg))+'">'+(st.avg===null?'–':fmtG(st.avg))+'</span></div>';
+  if(g&&st.avg!==null)h+='<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="'+g+'" aria-valuenow="'+Math.min(g,Math.round(st.avg*10)/10)+'"><i style="width:'+Math.min(100,st.avg/g*100)+'%;background:'+(st.avg>=g?'var(--m3)':'var(--accent)')+'"></i></div>';
+  if(g)h+='<p class="small" style="margin:0"><b>Meta '+fmtG(g)+'.</b> '+esc(goalMsg(sj,st))+'</p>';
+  h+='<div class="stack" style="gap:6px"><span class="small muted">Dificultad</span><div class="seg" style="grid-template-columns:repeat(4,1fr)" role="group" aria-label="Dificultad">'+[['auto','Auto'],['e','Fácil'],['m','Media'],['h','Difícil']].map(function(t){var on=(sj.diff||'auto')===t[0];return '<button data-a="subDiff" data-s="'+id+'" data-v="'+t[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+t[1]+'</button>';}).join('')+'</div></div>';
+  h+='<div class="twin"><div class="stack" style="gap:6px"><span class="small muted">Nota meta (0–10)</span><input class="field" type="number" min="0" max="10" step="0.1" inputmode="decimal" data-g="goal" data-s="'+id+'" value="'+(g||'')+'" placeholder="Ej. 10"></div><div class="stack" style="gap:6px"><span class="small muted">Evaluaciones que quedan</span><input class="field" type="number" min="1" max="30" step="1" inputmode="numeric" data-g="rem" data-s="'+id+'" value="'+N+'"></div></div>';
+  h+=st.l.slice(0,8).map(function(x){return '<button class="row between small" style="text-align:left;width:100%" data-a="editGr" data-v="'+esc(x.id)+'"><span style="overflow-wrap:anywhere">'+esc(x.name||GTYPES[x.type])+' <span class="muted">· '+GTYPES[x.type]+' · '+esc(dayLabel(x.date))+'</span></span><b style="color:'+gcol(x.score)+'">'+fmtG(x.score)+'</b></button>';}).join('');
+  if(st.l.length>8)h+='<span class="small muted">y '+(st.l.length-8)+' notas más…</span>';
+  return h+'<div><button class="btn sm" data-a="newGr" data-v="'+id+'">'+ic('plus',16)+' Añadir nota</button></div></section>';
+}
+function vGrades(){
+  var h=backBar('Notas y metas','more');
+  if(!S.subjects.length)return h+'<section class="card"><p class="muted" style="margin:0">Primero crea tus asignaturas en Más → Asignaturas.</p></section>';
+  var all=S.subjects.map(subjStat).filter(function(x){return x.n;});
+  h+='<section class="card stack"><div class="tiles"><div class="tile"><b>'+(all.length?fmtG(mean(all.map(function(x){return x.avg;}))):'–')+'</b><span class="small muted">media general</span></div><div class="tile"><b>'+GR().filter(function(g){return subjById(g.sid);}).length+'</b><span class="small muted">notas</span></div></div><p class="muted small" style="margin:0">La nota de cada asignatura es la media simple de sus notas (más métodos de ponderación llegarán más adelante). La dificultad automática sale de esa media: menos de 5,5 es difícil y más de 7,5 es fácil. Afecta al estrés del día.</p></section>';
+  return h+S.subjects.slice().sort(byName).map(gradeCard).join('');
+}
+/* formulario de nota */
+function openGrade(id,sid){
+  var g=id?GR().filter(function(x){return x.id===id;})[0]:null;
+  gf={id:id||null,sid:g?g.sid:(sid||(S.subjects.slice().sort(byName)[0]||{}).id||''),name:g?g.name:'',type:g?g.type:'exam',score:g?String(g.score):'',date:g?g.date:dkey(Date.now()),del:false};
+  renderGrade();$sheet.classList.add('open');
+  try{lastFocus=document.activeElement;}catch(e){}
+}
+function renderGrade(){
+  $sheet.innerHTML='<div class="sheetbox"><div class="row between"><h2>'+(gf.id?'Editar nota':'Nueva nota')+'</h2><button class="iconbtn" data-a="close" aria-label="Cerrar">'+ic('x')+'</button></div>'+
+    '<div class="stack" style="gap:6px"><h3>Asignatura</h3><select id="gSubj" class="field">'+S.subjects.slice().sort(byName).map(function(x){return '<option value="'+esc(x.id)+'"'+(gf.sid===x.id?' selected':'')+'>'+esc(x.name)+'</option>';}).join('')+'</select></div>'+
+    '<div class="stack" style="gap:6px"><h3>Tipo</h3><div class="seg" style="grid-template-columns:repeat(3,1fr)">'+Object.keys(GTYPES).map(function(k){return '<button data-a="grType" data-v="'+k+'" class="'+(gf.type===k?'on':'')+'" aria-pressed="'+(gf.type===k)+'">'+GTYPES[k]+'</button>';}).join('')+'</div></div>'+
+    fld('gName','Nombre (opcional)',gf.name,'maxlength="60" placeholder="Por ejemplo, Examen del tema 3"')+
+    '<div class="twin"><div class="stack" style="gap:6px"><h3>Nota (0–10)</h3><input id="gScore" class="field" type="number" min="0" max="10" step="0.01" inputmode="decimal" value="'+esc(gf.score)+'" placeholder="7,5"></div><div class="stack" style="gap:6px"><h3>Fecha</h3><input id="gDate" class="field" type="date" value="'+esc(gf.date)+'"></div></div>'+
+    '<div id="fErr" class="small" style="color:var(--danger)" role="alert"></div><div class="row" style="flex-wrap:wrap"><button class="btn" style="flex:1" data-a="grSave">Guardar</button>'+(gf.id?'<button class="btn danger" data-a="grDel">'+(gf.del?'Confirmar eliminar':'Eliminar')+'</button>':'')+'</div></div>';
+}
+function readGrade(){
+  var g=function(id){var e=document.getElementById(id);return e?e.value:null;},v;
+  if((v=g('gSubj'))!==null)gf.sid=v;if((v=g('gName'))!==null)gf.name=v;if((v=g('gScore'))!==null)gf.score=v;if((v=g('gDate'))!==null)gf.date=v;
+}
+function saveGrade(){
+  readGrade();var err=document.getElementById('fErr'),sc=parseFloat(String(gf.score).replace(',','.'));
+  if(!subjById(gf.sid)){err.textContent='Elige una asignatura.';return;}
+  if(isNaN(sc)||sc<0||sc>10){err.textContent='La nota debe estar entre 0 y 10.';return;}
+  if(!/^\d{4}-\d\d-\d\d$/.test(gf.date)){err.textContent='Elige una fecha.';return;}
+  var o=gf.id?GR().filter(function(x){return x.id===gf.id;})[0]:null;if(!o){o={id:nid('g')};GR().push(o);}
+  Object.assign(o,{sid:gf.sid,name:gf.name.trim().slice(0,60),type:gf.type,score:Math.round(sc*100)/100,date:gf.date});
+  touch();save();closeEditor();render(true);
+}
+function delGrade(){
+  if(!gf.del){gf.del=true;readGrade();renderGrade();return;}
+  var id=gf.id;S.grades=GR().filter(function(x){return x.id!==id;});touch();save();closeEditor();render(true);
+}
+function diffStressCard(){
+  if(!S.subjects.length)return '';
+  var L=classLoad(new Date()),pts=Math.round(100*.6*Math.min(1,L/6));
+  return '<section class="card stack"><h3>Dificultad y estrés</h3><p class="small" style="margin:0">'+(L>0?'Hoy tus clases suman unos <b>+'+pts+'</b> puntos al índice según su dificultad.':'Hoy no tienes clases que sumen estrés.')+' Los exámenes, entregas y tareas de asignaturas difíciles pesan más (×1,3) y los de las fáciles menos (×0,8).</p><div class="chips" style="margin:0">'+S.subjects.slice().sort(byName).map(function(sj){return '<span class="chip"><span class="dot" style="background:'+esc(sj.color)+'"></span>'+esc(sj.name)+' · '+DIFFN[diffOf(sj).lvl]+'</span>';}).join('')+'</div><div><button class="btn sm ghost" data-a="tab" data-v="grades">Ver notas y dificultad</button></div></section>';
+}
+document.addEventListener('change',function(ev){
+  var t=ev.target;if(!t||!t.getAttribute||!t.getAttribute('data-g'))return;
+  var sj=subjById(t.getAttribute('data-s'));if(!sj)return;
+  var f=t.getAttribute('data-g'),v=parseFloat(String(t.value).replace(',','.'));
+  if(f==='goal')sj.goal=(!isNaN(v)&&v>0&&v<=10)?Math.round(v*10)/10:0;
+  else if(f==='rem')sj.rem=(!isNaN(v)&&v>=1)?Math.min(30,Math.round(v)):1;
+  save();render(true);
+});
+
 var ui={days:20,delSc:null,dyMsg:'',delCat:null,delGoal:null,remShown:false,fq:'',fm:[],fa:'',fx:false,calMode:'month',editAct:null,edIcon:'heart',tab:'home',range:30,calY:new Date().getFullYear(),calM:new Date().getMonth(),calSel:dkey(Date.now()),exp:'',expFmt:'',msg:'',iconPick:'heart',wipe:false,delAct:null,schView:'day',schWk:null,schDay:null,pm:null,agView:'pend',agDay:dkey(Date.now()),perSel:null,moodRange:30,packMsg:'',packConfirm:false,delSub:null,cmdQ:'',cmdSel:0,catsOpen:{}};
 
 /* ---------- media (IndexedDB) ---------- */
@@ -2583,7 +2694,7 @@ function mediaStats(cb){
 function fmtSize(b){return b>=1048576?(b/1048576).toFixed(b>=104857600?0:1)+' MB':Math.max(1,Math.round(b/1024))+' KB';}
 function blobToDataUrl(b,cb){var r=new FileReader();r.onload=function(){cb(String(r.result));};r.onerror=function(){cb(null);};r.readAsDataURL(b);}
 function exportFull(cb){
-  var o={v:1,people:S.people,subs:S.subs,skin:S.skin,subjects:S.subjects,teachers:S.teachers,classes:S.classes,events:S.events,absences:S.absences,absJust:!!S.absJust,pomo:S.pomo,sessions:S.sessions,sched:S.sched,scales:S.scales,cats:S.cats,acts:S.acts,entries:S.entries.filter(function(x){return !x.ex;}),goals:S.goals.filter(function(g){return !g.ex;}),reminder:S.reminder,moodNames:S.moodNames,palette:S.palette};
+  var o={v:1,people:S.people,subs:S.subs,skin:S.skin,subjects:S.subjects,teachers:S.teachers,classes:S.classes,events:S.events,grades:GR(),absences:S.absences,absJust:!!S.absJust,pomo:S.pomo,sessions:S.sessions,sched:S.sched,scales:S.scales,cats:S.cats,acts:S.acts,entries:S.entries.filter(function(x){return !x.ex;}),goals:S.goals.filter(function(g){return !g.ex;}),reminder:S.reminder,moodNames:S.moodNames,palette:S.palette};
   var used={};o.entries.forEach(function(e){(e.m||[]).forEach(function(m){used[m.id]=1;});});
   var ids=Object.keys(used),parts=[JSON.stringify(o).slice(0,-1)+',"media":['],first=true;
   (function next(){
@@ -2739,7 +2850,7 @@ function subjBadge(sj,sz){return '<span class="sbadge" style="background:'+esc(s
 function soon(t,d){return header()+'<h2>'+t+'</h2><section class="card stack"><p class="muted" style="margin:0">'+d+'</p></section>';}
 function menuRow(tab,icon,title,sub){return '<button class="card mrow" data-a="tab" data-v="'+tab+'"><span class="sbadge" style="background:var(--accent-soft);color:var(--accent)">'+ic(icon,22)+'</span><span class="mid"><b>'+title+'</b><span class="small muted">'+sub+'</span></span>'+ic('right',18)+'</button>';}
 function vMore(){
-  return header()+'<h2>Más</h2>'+menuRow('subj','school','Asignaturas',S.subjects.length+' creadas')+menuRow('teach','users','Profesores',S.teachers.length+' guardados')+menuRow('people','heart','Personas',S.people.length+' guardadas')+menuRow('mood','brain','Estado anímico','Diagnóstico y pautas')+menuRow('abs','flag','Faltas y retrasos',S.absences.length+' registrados')+menuRow('pomo','timer','Pomodoro',S.sessions.length+' completados')+menuRow('stress','stats','Nivel de estrés',(function(){var n=stNow();return stLevel(n.r.i)[1]+' · '+n.r.i+'/100';})())+menuRow('photos','image','Fototeca',phCount()+' archivos')+menuRow('set','gear','Ajustes','Temas, ánimos, datos y copias');
+  return header()+'<h2>Más</h2>'+menuRow('subj','school','Asignaturas',S.subjects.length+' creadas')+menuRow('teach','users','Profesores',S.teachers.length+' guardados')+menuRow('people','heart','Personas',S.people.length+' guardadas')+menuRow('mood','brain','Estado anímico','Diagnóstico y pautas')+menuRow('grades','cap','Notas y metas',gradesSub())+menuRow('abs','flag','Faltas y retrasos',S.absences.length+' registrados')+menuRow('pomo','timer','Pomodoro',S.sessions.length+' completados')+menuRow('stress','stats','Nivel de estrés',(function(){var n=stNow();return stLevel(n.r.i)[1]+' · '+n.r.i+'/100';})())+menuRow('photos','image','Fototeca',phCount()+' archivos')+menuRow('set','gear','Ajustes','Temas, ánimos, datos y copias');
 }
 function vSubj(){
   var h=backBar('Asignaturas','more')+'<div><button class="btn sm" data-a="newSubj">'+ic('plus',18)+' Nueva asignatura</button></div>';
@@ -2935,14 +3046,14 @@ function delForm(){
   }
   if(!fo.del){fo.del=true;readForm();renderForm();return;}
   var id=fo.id;
-  if(fo.type==='subj'){S.subjects=S.subjects.filter(function(x){return x.id!==id;});S.classes=S.classes.filter(function(c){return c.sid!==id;});S.events.forEach(function(x){if(x.sid===id)x.sid='';});S.absences=S.absences.filter(function(a){return a.sid!==id;});}
+  if(fo.type==='subj'){S.subjects=S.subjects.filter(function(x){return x.id!==id;});S.classes=S.classes.filter(function(c){return c.sid!==id;});S.events.forEach(function(x){if(x.sid===id)x.sid='';});S.absences=S.absences.filter(function(a){return a.sid!==id;});S.grades=GR().filter(function(g){return g.sid!==id;});}
   else{S.teachers=S.teachers.filter(function(x){return x.id!==id;});S.subjects.forEach(function(x){if(x.teacher===id)x.teacher='';});}
   save();closeEditor();render(true);
 }
 
 function renderTabs(){
   var T=[['home','Inicio','home'],['agenda','Agenda','list'],['sched','Horario','clock'],['log','Ánimo','wave'],['more','Más','dots']];
-  var grp={log:['log','cal','stats','mood'],more:['more','set','subj','teach','abs','pomo','stress','photos','people','person']};
+  var grp={log:['log','cal','stats','mood'],more:['more','set','subj','teach','abs','pomo','stress','grades','photos','people','person']};
   $tabs.innerHTML=T.map(function(t){var on=grp[t[0]]?grp[t[0]].indexOf(ui.tab)>-1:ui.tab===t[0];return '<button data-a="tab" data-v="'+t[0]+'" class="'+(on?'on':'')+'" aria-label="'+t[1]+'"'+(on?' aria-current="page"':'')+'>'+ic(t[2],22)+t[1]+'</button>';}).join('');
 }
 
@@ -3207,7 +3318,7 @@ function vSet(){
 function render(keepScroll){
   var y=$view.scrollTop;
   renderTabs();
-  $view.innerHTML=ui.tab==='log'?vLog():ui.tab==='cal'?vCal():ui.tab==='stats'?vStats():ui.tab==='home'?vHome():ui.tab==='agenda'?vAgenda():ui.tab==='sched'?vSched():ui.tab==='more'?vMore():ui.tab==='subj'?vSubj():ui.tab==='teach'?vTeach():ui.tab==='abs'?vAbs():ui.tab==='pomo'?vPomo():ui.tab==='stress'?vStress():ui.tab==='photos'?vPhotos():ui.tab==='mood'?vMood():ui.tab==='people'?vPeople():ui.tab==='person'?vPerson():vSet();
+  $view.innerHTML=ui.tab==='log'?vLog():ui.tab==='cal'?vCal():ui.tab==='stats'?vStats():ui.tab==='home'?vHome():ui.tab==='agenda'?vAgenda():ui.tab==='sched'?vSched():ui.tab==='more'?vMore():ui.tab==='subj'?vSubj():ui.tab==='teach'?vTeach():ui.tab==='abs'?vAbs():ui.tab==='pomo'?vPomo():ui.tab==='stress'?vStress():ui.tab==='grades'?vGrades():ui.tab==='photos'?vPhotos():ui.tab==='mood'?vMood():ui.tab==='people'?vPeople():ui.tab==='person'?vPerson():vSet();
   $view.scrollTop=keepScroll?y:0;
   $view.setAttribute('data-tab',ui.tab);
   $view.classList.toggle('enter',!keepScroll);
@@ -3283,7 +3394,8 @@ function doImportObj(o){
   (o.people||[]).forEach(function(p){if(p&&p.id&&p.name&&!persById(String(p.id)))S.people.push({id:String(p.id),name:String(p.name).slice(0,30),color:/^#[0-9a-fA-F]{6}$/.test(p.color)?p.color:PCOL[5],note:String(p.note||'').slice(0,1000)});});
   (o.subs||[]).forEach(function(s){if(s&&s.id&&s.name&&s.parent&&!subById(String(s.id)))S.subs.push({id:String(s.id),parent:String(s.parent),name:String(s.name).slice(0,24),icon:ICONS[s.icon]?s.icon:'star'});});
   (o.teachers||[]).forEach(function(t){if(t&&t.id&&t.name&&!teachById(String(t.id)))S.teachers.push({id:String(t.id),name:String(t.name).slice(0,60),email:String(t.email||'').slice(0,120),phone:String(t.phone||'').slice(0,30),office:String(t.office||'').slice(0,30),note:String(t.note||'').slice(0,2000)});});
-  (o.subjects||[]).forEach(function(x){if(x&&x.id&&x.name&&!subjById(String(x.id)))S.subjects.push({id:String(x.id),name:String(x.name).slice(0,60),color:SW.indexOf(x.color)>-1?x.color:SW[5],icon:ICONS[x.icon]?x.icon:'book',teacher:x.teacher&&teachById(String(x.teacher))?String(x.teacher):'',room:String(x.room||'').slice(0,30),total:Math.max(0,Math.min(999,Math.round(+x.total)||0)),maxPct:Math.max(0,Math.min(100,Math.round(+x.maxPct)||0)),note:String(x.note||'').slice(0,2000)});});
+  (o.subjects||[]).forEach(function(x){if(x&&x.id&&x.name&&!subjById(String(x.id)))S.subjects.push({id:String(x.id),name:String(x.name).slice(0,60),color:SW.indexOf(x.color)>-1?x.color:SW[5],icon:ICONS[x.icon]?x.icon:'book',teacher:x.teacher&&teachById(String(x.teacher))?String(x.teacher):'',room:String(x.room||'').slice(0,30),total:Math.max(0,Math.min(999,Math.round(+x.total)||0)),maxPct:Math.max(0,Math.min(100,Math.round(+x.maxPct)||0)),diff:['e','m','h'].indexOf(x.diff)>-1?x.diff:'',goal:Math.max(0,Math.min(10,+x.goal||0)),rem:Math.max(1,Math.min(30,Math.round(+x.rem)||1)),note:String(x.note||'').slice(0,2000)});});
+  (o.grades||[]).forEach(function(g){if(g&&g.id&&subjById(String(g.sid))&&typeof g.score==='number'&&g.score>=0&&g.score<=10&&/^\d{4}-\d\d-\d\d$/.test(g.date)&&!GR().some(function(y){return y.id===String(g.id);}))GR().push({id:String(g.id),sid:String(g.sid),name:String(g.name||'').slice(0,60),type:GTYPES[g.type]?g.type:'other',score:Math.round(g.score*100)/100,date:g.date});});
   var hadSes=S.sessions.length>0;
   (o.sessions||[]).forEach(function(x){if(x&&x.id&&typeof x.ts==='number'&&x.min>0&&!S.sessions.some(function(y){return y.id===String(x.id);}))S.sessions.push({id:String(x.id),sid:subjById(String(x.sid))?String(x.sid):'',ts:x.ts,min:Math.min(180,Math.round(x.min))});});
   if(o.pomo&&typeof o.pomo==='object'&&!hadSes){S.pomo=Object.assign({},S.pomo,o.pomo);pomoEnsure();}
@@ -3583,7 +3695,7 @@ document.addEventListener('click',function(ev){
       for(var q=1;q<=5;q++){var t2=document.getElementById('mn'+q).value.trim();names.push(t2||DEFN[q]);}
       S.moodNames=names;save();document.getElementById('moodMsg').textContent='Nombres guardados.';break;}
     case 'resetMoods':delete S.moodNames;S.palette='marea';applyPalette();save();render(true);break;
-    case 'exp':ui.expFmt=v;ui.exp=v==='json'?JSON.stringify({v:1,people:S.people,subs:S.subs,skin:S.skin,subjects:S.subjects,teachers:S.teachers,classes:S.classes,events:S.events,absences:S.absences,absJust:!!S.absJust,pomo:S.pomo,sessions:S.sessions,sched:S.sched,scales:S.scales,cats:S.cats,acts:S.acts,entries:S.entries.filter(function(x){return !x.ex;}),goals:S.goals.filter(function(g){return !g.ex;}),reminder:S.reminder,moodNames:S.moodNames,palette:S.palette},null,1):toCSV();render(true);break;
+    case 'exp':ui.expFmt=v;ui.exp=v==='json'?JSON.stringify({v:1,people:S.people,subs:S.subs,skin:S.skin,subjects:S.subjects,teachers:S.teachers,classes:S.classes,events:S.events,grades:GR(),absences:S.absences,absJust:!!S.absJust,pomo:S.pomo,sessions:S.sessions,sched:S.sched,scales:S.scales,cats:S.cats,acts:S.acts,entries:S.entries.filter(function(x){return !x.ex;}),goals:S.goals.filter(function(g){return !g.ex;}),reminder:S.reminder,moodNames:S.moodNames,palette:S.palette},null,1):toCSV();render(true);break;
     case 'copyExp':{
       var ta=document.getElementById('expArea');ta.select();
       var done=function(ok){el.textContent=ok?'Copiado':'Selecciona el texto y cópialo';};
