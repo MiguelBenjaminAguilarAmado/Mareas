@@ -50,17 +50,28 @@ Mareas es una aplicación web (PWA) para registrar cómo te sientes día a día 
 - **Acciones que suben o bajan el estrés:** marca acciones como «+ estrés» o «− estrés» y el nivel de estrés las tiene en cuenta como un ajuste suave.
 - **Sub-acciones:** detalle derivado de una acción principal (Ejercicio → Correr, Gimnasio…).
 - **Personas:** menú aparte con estadísticas por persona y insights como «¡Estar con Mariano hace que estés un +12% más feliz!» (ánimo con y sin esa persona; muestra relación, no causa).
+- **Grafo de relaciones:** menú propio (Más → Grafo de relaciones, y en la barra lateral de pantallas anchas) con una red de personas al estilo del Graph View de Obsidian, dibujada en `canvas`:
+  - **Física de fuerzas** en tiempo real: arrastra un nodo y la red se estira y se recoloca de forma elástica. Ajustes de fuerza central, repulsión, fuerza y distancia de enlaces.
+  - **Filtros y búsqueda** con sintaxis (`cat:amigo`, `grupo:clase`, `conf:>=4`, `ciudad:`, `pais:`, `tipo:`, `con:` y `-término` para excluir), opción de ocultar personas sin conexiones y de mostrar u ocultar a «Yo».
+  - **Grupos como nodos** (rombos unidos a sus miembros) y **co-apariciones** opcionales a partir de tus entradas y eventos.
+  - **Grupos de color:** reglas con la misma sintaxis del buscador, cada una con su color; si ninguna coincide, color por categoría o color de cada persona.
+  - **Modo local:** solo el entorno de la persona seleccionada, con profundidad de 1 a 5.
+  - **Flechas** de dirección en las relaciones, desvanecimiento de texto según el zoom, tamaño de nodos y grosor de enlaces.
+  - **Animar evolución:** reproduce cómo fue creciendo tu red desde la primera aparición de cada persona, con barra para recorrer el tiempo.
+  - **Interacción:** zoom con rueda o pellizco, desplazamiento arrastrando el fondo, resaltado de vecinos al pasar o seleccionar, doble toque o Alt/Ctrl + clic para abrir la ficha, y lista equivalente accesible bajo el grafo.
+  - Los ajustes del grafo se guardan en este dispositivo (no se sincronizan con la nube).
 
 ### 📦 Mega-packs
 Un único archivo con TODO (entradas, personas, escalas, objetivos, agenda escolar, ajustes y fotos/vídeos). Se importa combinando con tus datos o reemplazándolo todo.
 
 ### 🎨 Apariencia
-Cinco estilos visuales sobre el mismo código, con diseño adaptado a móvil, tablet vertical y pantallas anchas (iPad horizontal y ordenador: barra lateral, dos columnas y ventanas centradas):
+Seis estilos visuales sobre el mismo código, con diseño adaptado a móvil, tablet vertical y pantallas anchas (iPad horizontal y ordenador: barra lateral, dos columnas y ventanas centradas):
 
 | Estilo | Descripción |
 |---|---|
 | **Open-Code** | Terminal oscuro en monoespaciada |
-| **Minimalista** | Plano y muy rápido, sin efectos |
+| **Minimalista** | Plano y limpio, con animaciones suaves |
+| **Lite** | Como Minimalista, pero sin ninguna animación (máximo ahorro) |
 | **Liquid Glass** | Cristal translúcido en azul cielo |
 | **Android** | Superficies tonales y esquinas suaves |
 | **Apple Silicon** | Negro puro, cristal esmerilado y gradientes líquidos (siempre oscuro) |
@@ -93,7 +104,9 @@ En **Ajustes → Nube y sincronización** puedes crear una cuenta (correo y cont
 
 - HTML, CSS y JavaScript puros, sin frameworks ni librerías.
 - Iconos SVG propios en un sprite único.
-- Service Worker con caché para funcionar sin conexión.
+- Grafo de relaciones con motor de física propio sobre `canvas` (sin librerías).
+- Service Worker con caché para funcionar sin conexión y aviso de nueva versión.
+- Capa de animaciones común (cascada de entrada, pulsaciones con rebote, barras que crecen, paneles con transición) que respeta «reducir movimiento» del sistema.
 - Web App Manifest para la instalación como app.
 - Supabase (autenticación, PostgreSQL y Storage) consumido con `fetch`, sin librerías.
 

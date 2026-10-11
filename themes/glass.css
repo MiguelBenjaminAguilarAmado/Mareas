@@ -1,0 +1,110 @@
+/* Liquid Glass tokens: sky blue */
+:root[data-skin="glass"]{
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Segoe UI',system-ui,sans-serif; --sw:1.7; --r:26px;
+  --bg:#E8F4FD; --surface:#FFFFFF; --surface2:#DDEBF8; --fg:#0E2236; --muted:#566E87; --line:#CFE2F3;
+  --accent:#0A74D6; --accent-ink:#FFFFFF; --accent-soft:#D5EAFF; --danger:#C0362C;
+  --m1:#8F8DE8; --m2:#5FA8F2; --m3:#55CBBE; --m4:#F3C75B; --m5:#FF9068;
+  --glass:rgba(255,255,255,.48); --glass-hi:rgba(255,255,255,.74); --glass-low:rgba(255,255,255,.30); --glass-edge:rgba(255,255,255,.88);
+  --glass-sheet:rgba(238,247,255,.84); --glass-list:rgba(255,255,255,.60); --sheen:rgba(255,255,255,.70); --glass-shadow:rgba(25,95,165,.18);
+  --b1:#8CCDFF; --b2:#C2E8FF; --b3:#A9C6FF; --b4:#BFF0F2;
+}
+@media (prefers-color-scheme: dark){:root[data-skin="glass"]:not([data-theme="light"]){
+    --bg:#06121E; --surface:#0E2236; --surface2:#15304A; --fg:#E6F2FF; --muted:#8CA7C2; --line:#1C3853;
+    --accent:#5DB8FF; --accent-ink:#04121F; --accent-soft:#12365A; --danger:#FF8A80;
+    --glass:rgba(14,38,64,.52); --glass-hi:rgba(40,88,136,.58); --glass-low:rgba(255,255,255,.06); --glass-edge:rgba(160,210,255,.20);
+    --glass-sheet:rgba(8,26,44,.84); --glass-list:rgba(16,44,74,.62); --sheen:rgba(190,225,255,.15); --glass-shadow:rgba(0,0,0,.5);
+    --b1:#0C4A7E; --b2:#08304F; --b3:#17408F; --b4:#0A5560;
+    color-scheme:dark;
+  }}
+:root[data-skin="glass"][data-theme="dark"]{
+  --bg:#06121E; --surface:#0E2236; --surface2:#15304A; --fg:#E6F2FF; --muted:#8CA7C2; --line:#1C3853;
+  --accent:#5DB8FF; --accent-ink:#04121F; --accent-soft:#12365A; --danger:#FF8A80;
+  --glass:rgba(14,38,64,.52); --glass-hi:rgba(40,88,136,.58); --glass-low:rgba(255,255,255,.06); --glass-edge:rgba(160,210,255,.20);
+  --glass-sheet:rgba(8,26,44,.84); --glass-list:rgba(16,44,74,.62); --sheen:rgba(190,225,255,.15); --glass-shadow:rgba(0,0,0,.5);
+  --b1:#0C4A7E; --b2:#08304F; --b3:#17408F; --b4:#0A5560;
+  color-scheme:dark;
+}
+/* ===== Liquid Glass: sky blue, translucent, light on edges. Blur only on a few large surfaces; list items stay cheap. ===== */
+[data-skin="glass"] body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:
+  radial-gradient(62% 38% at 12% 6%,var(--b1) 0,transparent 72%),
+  radial-gradient(52% 38% at 94% 18%,var(--b2) 0,transparent 72%),
+  radial-gradient(62% 42% at 86% 88%,var(--b3) 0,transparent 72%),
+  radial-gradient(56% 38% at 4% 82%,var(--b4) 0,transparent 72%)}
+[data-skin="glass"] body{letter-spacing:-.005em}
+[data-skin="glass"] h2{font-size:22px;letter-spacing:-.02em}
+[data-skin="glass"] .brand{font-size:38px;line-height:1.05;letter-spacing:-.035em}
+[data-skin="glass"] .today{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+[data-skin="glass"] .orb{display:grid;width:46px;height:46px;border-radius:50%;place-items:center;flex:none;color:var(--accent);
+  background:var(--glass-hi);border:1px solid var(--glass-edge);box-shadow:inset 0 1px 0 var(--glass-edge),0 8px 22px var(--glass-shadow)}
+[data-skin="glass"] .card,[data-skin="glass"] .banner{background:var(--glass);border:1px solid var(--glass-edge);position:relative;isolation:isolate;
+  -webkit-backdrop-filter:blur(22px) saturate(1.7);backdrop-filter:blur(22px) saturate(1.7);
+  box-shadow:inset 0 1px 0 var(--glass-edge),0 10px 28px var(--glass-shadow)}
+[data-skin="glass"] .card::before,[data-skin="glass"] .banner::before{content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;pointer-events:none;
+  background:linear-gradient(140deg,var(--sheen) 0,transparent 36%,transparent 68%,var(--glass-low) 100%)}
+[data-skin="glass"] .banner{border-radius:20px;font-weight:500}
+[data-skin="glass"] .entry{background:var(--glass-list);-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:24px;box-shadow:inset 0 1px 0 var(--glass-edge),0 6px 16px var(--glass-shadow)}
+[data-skin="glass"] .entry::before{display:none}
+[data-skin="glass"] .facebtn,[data-skin="glass"] .act,[data-skin="glass"] .cell,[data-skin="glass"] .btn,[data-skin="glass"] .iconbtn,[data-skin="glass"] #tabs button,[data-skin="glass"] .entry,[data-skin="glass"] .sclv button{transition:transform .18s cubic-bezier(.3,1.4,.5,1),background-color .2s}
+[data-skin="glass"] .facebtn:active,[data-skin="glass"] .act:active,[data-skin="glass"] .cell:active,[data-skin="glass"] .btn:active,[data-skin="glass"] .iconbtn:active,[data-skin="glass"] #tabs button:active,[data-skin="glass"] .entry:active,[data-skin="glass"] .sclv button:active{transform:scale(.97)}
+[data-skin="glass"] #tabs{margin:0 0 max(10px,env(safe-area-inset-bottom,0px));padding:6px;gap:4px;border:1px solid var(--glass-edge);border-radius:32px;background:var(--glass);
+  -webkit-backdrop-filter:blur(26px) saturate(1.9);backdrop-filter:blur(26px) saturate(1.9);box-shadow:inset 0 1px 0 var(--glass-edge),0 14px 34px var(--glass-shadow)}
+[data-skin="glass"] #tabs button{border-radius:26px}
+[data-skin="glass"] #tabs button.on{background:var(--glass-hi);box-shadow:inset 0 1px 0 var(--glass-edge),0 4px 12px var(--glass-shadow)}
+[data-skin="glass"] #sheet{background:rgba(10,30,52,.28);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+[data-skin="glass"] .sheetbox{background:var(--glass-sheet);border:1px solid var(--glass-edge);border-bottom:0;border-radius:34px 34px 0 0;
+  -webkit-backdrop-filter:blur(34px) saturate(1.9);backdrop-filter:blur(34px) saturate(1.9);
+  box-shadow:inset 0 1px 0 var(--glass-edge),0 -12px 40px var(--glass-shadow)}
+[data-skin="glass"] #sheet.enter .sheetbox{animation:sheetin .38s cubic-bezier(.2,.9,.3,1.1) both}
+[data-skin="glass"] .seg{background:var(--glass-low);border:1px solid var(--glass-edge);border-radius:18px;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+[data-skin="glass"] .seg button{border-radius:14px}
+[data-skin="glass"] .seg button.on{background:var(--glass-hi);box-shadow:inset 0 1px 0 var(--glass-edge),0 3px 8px var(--glass-shadow)}
+[data-skin="glass"] .field{background:var(--glass-low);border:1px solid var(--glass-edge);border-radius:16px;box-shadow:inset 0 1px 3px rgba(0,30,60,.08)}
+[data-skin="glass"] .btn{border-radius:18px;background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 80%,#fff) 0,var(--accent) 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 8px 20px color-mix(in srgb,var(--accent) 34%,transparent)}
+[data-skin="glass"] .btn.ghost{background:var(--glass-hi);color:var(--fg);box-shadow:inset 0 1px 0 var(--glass-edge),0 4px 12px var(--glass-shadow)}
+[data-skin="glass"] .btn.danger{background:transparent;box-shadow:none}
+[data-skin="glass"] .iconbtn{background:var(--glass-hi);border:1px solid var(--glass-edge);border-radius:16px;box-shadow:inset 0 1px 0 var(--glass-edge)}
+[data-skin="glass"] .facebtn{border-radius:20px}
+[data-skin="glass"] .facebtn.sel{background:var(--glass-hi);border-color:transparent;box-shadow:inset 0 1px 0 var(--glass-edge),0 0 0 2px color-mix(in srgb,var(--accent) 45%,transparent),0 6px 16px var(--glass-shadow)}
+[data-skin="glass"] .chip{background:var(--glass-low);border:1px solid var(--glass-edge)}
+[data-skin="glass"] .act{background:var(--glass-low);border:1px solid var(--glass-edge);border-radius:20px}
+[data-skin="glass"] .act.on{background:var(--glass-hi);border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 28%,transparent),inset 0 1px 0 var(--glass-edge)}
+[data-skin="glass"] .cell{background:var(--glass-low);border-radius:15px}
+[data-skin="glass"] .cell.has{box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -3px 6px rgba(0,0,0,.08)}
+[data-skin="glass"] .ygrid button,[data-skin="glass"] .ygrid i{background:var(--glass-low)}
+[data-skin="glass"] .ygrid i.nx{background:none}
+[data-skin="glass"] .iconpick button{background:var(--glass-low);border-radius:15px}
+[data-skin="glass"] .iconpick button.on{background:var(--glass-hi);color:var(--accent)}
+[data-skin="glass"] .fchip{background:var(--glass-low);border-radius:16px}
+[data-skin="glass"] .sclv button{background:var(--glass-low);border:1px solid var(--glass-edge);border-radius:16px}
+[data-skin="glass"] .sclv button.on{background:var(--accent);border-color:var(--accent)}
+[data-skin="glass"] .skin{background:var(--glass-low);border:2px solid var(--glass-edge);border-radius:20px}
+[data-skin="glass"] .skin.on{border-color:var(--accent)}
+[data-skin="glass"] .bar,[data-skin="glass"] .div{background:var(--glass-low)}
+[data-skin="glass"] .dist i,[data-skin="glass"] .bar i{box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
+[data-skin="glass"] .arow-s{border-bottom-color:var(--glass-edge)}
+[data-skin="glass"] #view.enter>*{animation:rise .45s cubic-bezier(.2,.8,.2,1) both}
+[data-skin="glass"] #view.enter>*:nth-child(2){animation-delay:.04s}
+[data-skin="glass"] #view.enter>*:nth-child(3){animation-delay:.08s}
+[data-skin="glass"] #view.enter>*:nth-child(4){animation-delay:.12s}
+[data-skin="glass"] #view.enter>*:nth-child(n+5){animation-delay:.16s}
+@media (prefers-reduced-transparency: reduce){[data-skin="glass"] .card,[data-skin="glass"] .banner,[data-skin="glass"] #tabs,[data-skin="glass"] .seg,[data-skin="glass"] .sheetbox,[data-skin="glass"] #sheet{-webkit-backdrop-filter:none;backdrop-filter:none}
+[data-skin="glass"] .card,[data-skin="glass"] .banner,[data-skin="glass"] #tabs,[data-skin="glass"] .entry{background:var(--surface)}
+[data-skin="glass"] .sheetbox{background:var(--bg)}}
+[data-skin="glass"] .evrow{background:var(--glass-list);-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:22px}
+[data-skin="glass"] .evrow::before{display:none}
+/* ===== Tema Apple Silicon: negro puro, cristal y gradientes líquidos (reutiliza las reglas de Liquid Glass) ===== */
+:root[data-skin="glass"][data-variant="silicon"]{
+  color-scheme:dark;--r:28px;
+  --bg:#000000;--surface:#151516;--surface2:#1d1d20;--fg:#F5F5F7;--muted:#8E8E93;--line:rgba(255,255,255,.10);
+  --accent:#2DA2FF;--accent-ink:#FFFFFF;--accent-soft:rgba(45,162,255,.18);--danger:#FF6B6B;
+  --m1:#8B5CF6;--m2:#2D9CFF;--m3:#19D3B0;--m4:#FFB020;--m5:#FF4FA0;
+  --glass:rgba(25,25,25,.40);--glass-hi:rgba(255,255,255,.10);--glass-low:rgba(255,255,255,.05);--glass-edge:rgba(255,255,255,.10);
+  --glass-sheet:rgba(14,14,16,.84);--glass-list:rgba(255,255,255,.06);--sheen:rgba(255,255,255,.10);--glass-shadow:rgba(0,0,0,.45);
+  --b1:rgba(255,0,204,.38);--b2:rgba(0,201,255,.30);--b3:rgba(51,51,153,.55);--b4:rgba(255,149,0,.22);
+}
+[data-skin="glass"] .cmdbox{background:var(--glass-sheet);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border:1px solid var(--glass-edge)}
+/* movimiento propio de Liquid Glass */
+@keyframes orbbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}
+[data-skin="glass"] .orb svg{animation:orbbob 4.5s ease-in-out infinite}
+[data-skin="glass"] .card,[data-skin="glass"] .banner{transition:box-shadow .3s ease}

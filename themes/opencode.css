@@ -1,0 +1,28 @@
+/* Open-Code tokens: warm dark terminal, Apple HIG semantic colors */
+:root[data-skin="opencode"]{
+  --font:'Berkeley Mono','JetBrains Mono','SF Mono',ui-monospace,Menlo,Consolas,'Liberation Mono',monospace; --sw:1.6; --r:4px;
+  --bg:#201d1d; --surface:#2a2626; --surface2:#332f2f; --fg:#fdfcfc; --muted:#9a9898; --line:#423e3e;
+  --accent:#007aff; --accent-ink:#fdfcfc; --accent-soft:#12304f; --danger:#ff3b30;
+  --m1:#5e5ce6; --m2:#0a84ff; --m3:#30d158; --m4:#ffd60a; --m5:#ff9f0a;
+  --glass:#2a2626; --glass-hi:#2a2626; --glass-low:#332f2f; --glass-edge:#423e3e; --glass-sheet:#201d1d; --glass-list:#2a2626;
+  --sheen:transparent; --glass-shadow:rgba(0,0,0,.4);
+  --b1:#201d1d; --b2:#201d1d; --b3:#201d1d; --b4:#201d1d;
+  color-scheme:dark;
+}
+[data-skin="opencode"] body{font-size:14px;line-height:1.6}
+[data-skin="opencode"] .card,[data-skin="opencode"] .entry,[data-skin="opencode"] .btn,[data-skin="opencode"] .field,[data-skin="opencode"] .fchip,[data-skin="opencode"] .act,[data-skin="opencode"] .chip,[data-skin="opencode"] .banner,[data-skin="opencode"] .seg,[data-skin="opencode"] .sheetbox,[data-skin="opencode"] .skin,[data-skin="opencode"] .mth,[data-skin="opencode"] .sk-prev,[data-skin="opencode"] .orb{border-radius:4px}
+[data-skin="opencode"] .sheetbox{border-radius:4px 4px 0 0}
+[data-skin="opencode"] .card{box-shadow:none;border:1px solid var(--line)}
+[data-skin="opencode"] .brand::before{content:"$ ";color:var(--m3)}
+[data-skin="opencode"] .today{text-transform:lowercase}
+[data-skin="opencode"] h2,[data-skin="opencode"] h3{letter-spacing:0;text-transform:none}
+[data-skin="opencode"] .btn{font-weight:600;padding-inline:20px;letter-spacing:0}
+[data-skin="opencode"] .btn.ghost{border:1.5px solid var(--line);background:none;color:var(--fg)}
+[data-skin="opencode"] .btn:active{transform:translateY(1px)}
+[data-skin="opencode"] a{text-decoration:underline;color:var(--accent)}
+[data-skin="opencode"] #tabs{border-top:1px solid var(--line);background:var(--bg)}
+[data-skin="opencode"] .muted{color:var(--muted)}
+/* movimiento de terminal: seco y rápido, cursor parpadeante */
+:root[data-skin="opencode"]{--ease:ease-out;--spring:ease-out}
+[data-skin="opencode"] #view.enter>*{animation-duration:.18s}
+[data-skin="opencode"] .brand::after{content:"▌";color:var(--m3);margin-left:2px;animation:blink 1.1s steps(1) infinite}

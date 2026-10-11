@@ -1,0 +1,65 @@
+/* Android tokens: tonal green surfaces */
+:root[data-skin="android"]{
+  --font:Roboto,'Google Sans','Segoe UI',system-ui,sans-serif; --sw:2; --r:20px;
+  --bg:#F7FAF4; --surface:#EAF0E6; --surface2:#DCE5D8; --fg:#181D19; --muted:#4A574D; --line:#BCC8BC;
+  --accent:#006C4D; --accent-ink:#FFFFFF; --accent-soft:#C2EDD7; --danger:#BA1A1A;
+  --m1:#9B8AD6; --m2:#6BA6E5; --m3:#5DC3A0; --m4:#EFC24D; --m5:#F28B66;
+}
+@media (prefers-color-scheme: dark){:root[data-skin="android"]:not([data-theme="light"]){
+    --bg:#0F1511; --surface:#1B211C; --surface2:#262D27; --fg:#DFE4DC; --muted:#A5B0A6; --line:#404941;
+    --accent:#6FDBB0; --accent-ink:#003826; --accent-soft:#264A3A; --danger:#FFB4AB;
+    color-scheme:dark;
+  }}
+:root[data-skin="android"][data-theme="dark"]{
+  --bg:#0F1511; --surface:#1B211C; --surface2:#262D27; --fg:#DFE4DC; --muted:#A5B0A6; --line:#404941;
+  --accent:#6FDBB0; --accent-ink:#003826; --accent-soft:#264A3A; --danger:#FFB4AB;
+  color-scheme:dark;
+}
+/* ===== Android: flat tonal surfaces, pill buttons, full-width bottom navigation with an indicator pill ===== */
+[data-skin="android"] .brand{font-size:22px;font-weight:500;letter-spacing:0}
+[data-skin="android"] .top{align-items:center;padding-block:4px}
+[data-skin="android"] .today{order:0;font-size:12px}
+[data-skin="android"] .card{border:0;border-radius:20px;padding:16px}
+[data-skin="android"] .quick{background:var(--accent-soft)}
+[data-skin="android"] .entry{border-radius:20px}
+[data-skin="android"] .banner{border-radius:16px}
+[data-skin="android"] .btn{border-radius:999px;min-height:40px;padding:0 22px}
+[data-skin="android"] .btn.sm{min-height:32px;padding:0 16px}
+[data-skin="android"] .btn.ghost{background:var(--accent-soft)}
+[data-skin="android"] .btn.danger{border:1px solid var(--line)}
+[data-skin="android"] .btn:active,[data-skin="android"] .act:active,[data-skin="android"] .facebtn:active,[data-skin="android"] .iconbtn:active,[data-skin="android"] .entry:active,[data-skin="android"] .cell:active{opacity:.82}
+[data-skin="android"] .facebtn{border-radius:16px}
+[data-skin="android"] .facebtn.sel{background:var(--surface);border-color:transparent;box-shadow:0 0 0 2px var(--accent)}
+[data-skin="android"] .chip{border-radius:8px;padding:3px 9px 3px 6px;background:var(--surface2)}
+[data-skin="android"] .field{border-radius:12px;background:transparent;border:1px solid var(--muted)}
+[data-skin="android"] .field:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+[data-skin="android"] .seg{padding:0;gap:0;background:transparent;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+[data-skin="android"] .seg button{border-radius:0;min-height:40px;border-right:1px solid var(--line)}
+[data-skin="android"] .seg button:last-child{border-right:0}
+[data-skin="android"] .seg button.on{background:var(--accent-soft)}
+[data-skin="android"] .iconbtn{border-radius:50%;background:transparent}
+[data-skin="android"] .iconbtn:active{background:var(--accent-soft)}
+[data-skin="android"] .cell{border-radius:50%;background:transparent;font-weight:500}
+[data-skin="android"] .cell.has{font-weight:600}
+[data-skin="android"] .cell.now{border-color:var(--accent)}
+[data-skin="android"] .ygrid button,[data-skin="android"] .ygrid i{border-radius:50%}
+[data-skin="android"] .act{border-radius:16px;background:transparent;border:1px solid var(--line)}
+[data-skin="android"] .act.on{background:var(--accent-soft);border-color:transparent;box-shadow:0 0 0 1.5px var(--accent)}
+[data-skin="android"] .iconpick button{border-radius:50%;background:transparent}
+[data-skin="android"] .iconpick button.on{background:var(--accent-soft);border-color:transparent;color:var(--accent)}
+[data-skin="android"] .fchip{border-radius:50%;background:transparent}
+[data-skin="android"] .sclv button{border-radius:999px;background:transparent}
+[data-skin="android"] .skin{border-radius:16px}
+[data-skin="android"] #tabs{gap:0;background:var(--surface);border-top:0;padding:12px 16px max(14px,env(safe-area-inset-bottom,0px))}
+[data-skin="android"] #tabs button{gap:4px;padding:0;font-size:12px;font-weight:500}
+[data-skin="android"] #tabs button svg{box-sizing:content-box;width:24px;height:24px;padding:4px 14px;border-radius:16px}
+[data-skin="android"] #tabs button.on{color:var(--fg);font-weight:600}
+[data-skin="android"] #tabs button.on svg{background:var(--accent-soft);color:var(--accent)}
+[data-skin="android"] .sheetbox{position:relative;background:var(--surface);border-radius:28px 28px 0 0;padding-top:30px}
+[data-skin="android"] .sheetbox::before{content:"";position:absolute;top:10px;left:50%;width:32px;height:4px;margin-left:-16px;border-radius:2px;background:var(--muted);opacity:.5}
+@media (min-width:900px) and (min-height:480px){:root[data-skin="android"] #tabs button svg,:root[data-skin="android"] #tabs button.on svg{padding:0;background:none;width:22px;height:22px}
+:root[data-skin="android"] .sheetbox::before{display:none}}
+/* movimiento Material: curva enfatizada */
+:root[data-skin="android"]{--ease:cubic-bezier(.2,0,0,1);--spring:cubic-bezier(.2,0,0,1)}
+[data-skin="android"] #sheet.enter .sheetbox{animation:sheetin .4s cubic-bezier(.2,0,0,1) both}
+[data-skin="android"] #tabs button svg{transition:background-color .25s cubic-bezier(.2,0,0,1),color .25s}
