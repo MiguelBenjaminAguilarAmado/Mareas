@@ -100,6 +100,10 @@ En **Ajustes → Nube y sincronización** puedes crear una cuenta (correo y cont
 
 **¿Quieres tu propia nube?** Crea un proyecto en [Supabase](https://supabase.com), ejecuta [`supabase/schema.sql`](supabase/schema.sql) en su editor SQL y cambia `SBU` y `SBK` en `index.html`. En *Authentication → URL Configuration* pon la dirección de tu página como *Site URL* para que funcionen los enlaces de confirmación y de recuperación de contraseña.
 
+## 🤖 Conexión MCP (opcional)
+
+Con la nube activada puedes dejar que un asistente de IA compatible con MCP consulte tus entradas, estadísticas, personas, grafo y agenda, y (con una clave de escritura) cree entradas, tareas y conexiones. Las claves se crean y revocan en **Ajustes → Conexión con IA (MCP)**, y antes de cada escritura se guarda una copia. Instrucciones de despliegue en [`supabase/MCP.md`](supabase/MCP.md).
+
 ## 🛠️ Tecnología
 
 - HTML, CSS y JavaScript puros, sin frameworks ni librerías.

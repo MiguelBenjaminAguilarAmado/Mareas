@@ -2655,6 +2655,54 @@ function cloudCard(){
   h+='<div class="row" style="flex-wrap:wrap"><button class="btn sm" data-a="cloudSync">Sincronizar ahora</button><button class="btn sm ghost" data-a="cloudAuto">'+(m.auto?'Desactivar automática':'Activar automática')+'</button><button class="btn sm ghost" data-a="cloudOut">Cerrar sesión</button></div><p class="muted small" style="margin:0">Se sincroniza todo menos el estilo visual y las notificaciones de cada dispositivo. Los vídeos de más de 45 MB no se suben. Si borras algo en un dispositivo, el borrado no se copia a los demás.</p><div><button class="btn sm danger" data-a="cloudWipe">'+(q==='wipe'?'Confirmar: borrar mi copia de la nube':'Borrar mi copia de la nube')+'</button></div><div class="msg" id="cloudMsg" role="status">'+esc(ui.cloudMsg||'')+'</div></section>';
   return h;
 }
+/* ---------- conexión con IA (MCP): claves para el servidor supabase/functions/mareas-mcp ---------- */
+function mcpUrl(){return SBU+'/functions/v1/mareas-mcp';}
+function mcpSt(){return ui.mcp||(ui.mcp={list:null,tok:'',msg:'',rv:null,busy:false});}
+function mcpCard(){
+  if(!sbLoad())return '';
+  var m=mcpSt(),h='<section class="card stack"><h3>Conexión con IA (MCP)</h3><p class="muted small" style="margin:0">Permite que un asistente compatible con MCP consulte tus datos de la nube y, si lo autorizas, añada entradas o tareas. Requiere haber desplegado el servidor (<code>supabase/mcp.sql</code> y la función <code>mareas-mcp</code>). Tus datos no están cifrados de extremo a extremo: usa una clave solo con asistentes de confianza.</p>';
+  h+='<label class="stack" style="gap:6px"><span class="small"><b>Dirección del servidor</b></span><input class="field" readonly value="'+esc(mcpUrl())+'" onfocus="this.select()" aria-label="Dirección del servidor MCP"></label>';
+  if(m.tok)h+='<div class="stack" style="border:1px solid var(--accent);border-radius:12px;padding:12px"><b>Tu nueva clave</b><span class="small">Cópiala ahora: no se volverá a mostrar. Úsala como «Bearer» en el asistente.</span><input class="field" readonly value="'+esc(m.tok)+'" onfocus="this.select()" aria-label="Clave MCP"><div><button class="btn sm ghost" data-a="mcpHide">Ya la he copiado</button></div></div>';
+  h+='<div class="twin"><input id="mcpName" class="field" maxlength="60" placeholder="Nombre (p. ej. Claude)" aria-label="Nombre de la clave"><select id="mcpScope" class="field" aria-label="Permiso"><option value="read">Solo lectura</option><option value="write">Lectura y escritura</option></select></div>';
+  h+='<div class="row" style="flex-wrap:wrap"><button class="btn sm" data-a="mcpNew"'+(m.busy?' disabled':'')+'>Crear clave</button><button class="btn sm ghost" data-a="mcpList">'+(m.list?'Actualizar claves':'Ver mis claves')+'</button></div>';
+  if(m.list){
+    h+=m.list.length?'<div class="stack" style="gap:6px">'+m.list.map(function(k){
+      var st=k.revoked_at?'Revocada':(k.scope==='write'?'Lectura y escritura':'Solo lectura');
+      return '<div class="row" style="gap:8px"><span class="mid" style="flex:1;min-width:0"><b>'+esc(k.name)+'</b><span class="small muted" style="display:block">'+esc(st)+' · '+(k.last_used_at?'usada '+esc(new Date(k.last_used_at).toLocaleDateString('es')):'sin usar')+'</span></span>'+(k.revoked_at?'':'<button class="btn sm '+(m.rv===k.id?'danger':'ghost')+'" data-a="mcpRev" data-v="'+esc(k.id)+'">'+(m.rv===k.id?'Confirmar':'Revocar')+'</button>')+'</div>';
+    }).join('')+'</div>':'<span class="small muted">Todavía no has creado ninguna clave.</span>';
+  }
+  h+='<div class="msg small" role="status">'+esc(m.msg)+'</div>';
+  if(m.list&&m.list.some(function(k){return k.scope==='write'&&!k.revoked_at;}))h+='<p class="muted small" style="margin:0">Antes de cada cambio de una IA se guarda una copia en la nube (se conservan las 5 últimas). Si en este dispositivo tienes cambios sin sincronizar, Mareas te pedirá resolver el conflicto como siempre.</p>';
+  return h+'</section>';
+}
+async function mcpLoad(){
+  var m=mcpSt();
+  try{m.list=await sbRest('mareas_mcp_tokens?select=id,name,scope,created_at,last_used_at,revoked_at&order=created_at.desc');m.msg='';}
+  catch(e){m.msg=/404|42P01|relation/.test(String(e.message))?'Falta ejecutar supabase/mcp.sql en tu proyecto de Supabase.':'No se pudieron cargar las claves: '+e.message;}
+  render(true);
+}
+async function mcpNew(){
+  var m=mcpSt(),nm=document.getElementById('mcpName'),sc=document.getElementById('mcpScope');
+  var name=((nm&&nm.value)||'').trim().slice(0,60)||'Asistente de IA',scope=sc&&sc.value==='write'?'write':'read';
+  m.busy=true;m.msg='Creando clave…';render(true);
+  try{
+    var raw=new Uint8Array(24);crypto.getRandomValues(raw);
+    var tok='mrs_'+Array.prototype.map.call(raw,function(x){return ('0'+x.toString(16)).slice(-2);}).join('');
+    var s=await sbToken(),r=await fetch(SBU+'/rest/v1/mareas_mcp_tokens',{method:'POST',headers:{apikey:SBK,Authorization:'Bearer '+s.at,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({name:name,scope:scope,token_hash:await sha(tok)})});
+    if(!r.ok){var t='';try{t=await r.text();}catch(e){}throw new Error(r.status===404?'Falta ejecutar supabase/mcp.sql en tu proyecto de Supabase.':'Servidor '+r.status+' '+t.slice(0,100));}
+    m.tok=tok;m.msg='Clave creada.';
+    try{m.list=await sbRest('mareas_mcp_tokens?select=id,name,scope,created_at,last_used_at,revoked_at&order=created_at.desc');}catch(e2){}
+  }catch(e){m.msg=e.message;}
+  m.busy=false;render(true);
+}
+async function mcpRevoke(id){
+  var m=mcpSt();
+  if(m.rv!==id){m.rv=id;render(true);return;}
+  m.rv=null;
+  try{await sbRest('mareas_mcp_tokens?id=eq.'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({revoked_at:new Date().toISOString()})});m.msg='Clave revocada.';}
+  catch(e){m.msg='No se pudo revocar: '+e.message;}
+  await mcpLoad();
+}
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&sbLoad()&&SYM().auto&&Date.now()-SYM().last>120000)syncNow(true);});
 window.addEventListener('online',function(){if(sbLoad()&&SYM().auto)syncNow(true);});
 setTimeout(function(){if(sbLoad()&&SYM().auto)syncNow(true);},3500);
@@ -3969,7 +4017,7 @@ function vSet(){
   var h=backBar('Ajustes','more');
   h+='<details class="settings-group" data-g="0"'+sgOpen(0)+'><summary>Apariencia y tema</summary><div class="settings-group-body">';
   h+=packCard();
-  h+=cloudCard();
+  h+=cloudCard()+mcpCard();
   h+=appearanceCard();
   h+='</div></details><details class="settings-group" data-g="1"'+sgOpen(1)+'><summary>Actividades y categorías</summary><div class="settings-group-body">';
   var totalActs=S.acts.length;
@@ -4302,6 +4350,10 @@ document.addEventListener('click',function(ev){
     case 'cloudNewPass':cloudSetPass();break;
     case 'cloudOut':cloudLogout();break;
     case 'cloudSync':syncNow(false);break;
+    case 'mcpList':mcpLoad();break;
+    case 'mcpNew':mcpNew();break;
+    case 'mcpHide':if(ui.mcp)ui.mcp.tok='';render(true);break;
+    case 'mcpRev':mcpRevoke(v);break;
     case 'cloudAuto':{var am=SYM();am.auto=!am.auto;SYMsave(am);render(true);break;}
     case 'cloudRes':cloudResolve(v);break;
     case 'cloudWipe':cloudWipe();break;

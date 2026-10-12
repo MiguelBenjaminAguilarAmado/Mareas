@@ -1,4 +1,4 @@
-const V='mareas-v13';
+const V='mareas-v14';
 const FILES=['./','./index.html','./style.css','./Themes/glass.css','./Themes/android.css','./Themes/opencode.css','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',e=>{
   /* tolerante: un recurso que falle (por ejemplo un icono) ya no impide instalar el resto */
