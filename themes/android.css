@@ -63,3 +63,15 @@
 :root[data-skin="android"]{--ease:cubic-bezier(.2,0,0,1);--spring:cubic-bezier(.2,0,0,1)}
 [data-skin="android"] #sheet.enter .sheetbox{animation:sheetin .4s cubic-bezier(.2,0,0,1) both}
 [data-skin="android"] #tabs button svg{transition:background-color .25s cubic-bezier(.2,0,0,1),color .25s}
+
+/* ===== Efecto onda (ripple) de Material al pulsar: solo con CSS, sin JavaScript ===== */
+[data-skin="android"] :is(.btn,.card.mrow,.entry,.evrow,.crow,.iconbtn,.top-btn,.period-item){position:relative;overflow:hidden;isolation:isolate}
+[data-skin="android"] :is(.btn,.card.mrow,.entry,.evrow,.crow,.iconbtn,.top-btn,.period-item)::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;opacity:0;background:radial-gradient(circle,currentColor 0 62%,transparent 63%) center/0 0 no-repeat;transition:background-size .5s cubic-bezier(.2,0,0,1),opacity .55s ease}
+[data-skin="android"] :is(.btn,.card.mrow,.entry,.evrow,.crow,.iconbtn,.top-btn):active::after{opacity:.16;background-size:260% 260%;transition:background-size .45s cubic-bezier(.2,0,0,1),opacity 0s}
+[data-skin="android"] :is(.btn,.card.mrow,.entry,.evrow,.crow,.iconbtn,.top-btn):active{opacity:1}
+/* el indicador de la barra inferior crece desde el centro, como en Material 3 */
+@keyframes mdPill{from{transform:scaleX(.4);opacity:.5}to{transform:none;opacity:1}}
+[data-skin="android"] #tabs button.on svg{animation:mdPill .3s cubic-bezier(.2,0,0,1) both;transform:none}
+[data-skin="android"] .freebar,[data-skin="android"] .period-item{border-radius:20px;border:0}
+[data-skin="android"] .cell.off::before{border-radius:50%}
+[data-skin="android"] .dchip.off:not(.on){background-color:var(--surface2)}

@@ -26,3 +26,13 @@
 :root[data-skin="opencode"]{--ease:ease-out;--spring:ease-out}
 [data-skin="opencode"] #view.enter>*{animation-duration:.18s}
 [data-skin="opencode"] .brand::after{content:"▌";color:var(--m3);margin-left:2px;animation:blink 1.1s steps(1) infinite}
+
+/* ===== Movimiento de terminal: los títulos se "escriben" al entrar y los campos tienen cursor verde ===== */
+@keyframes ocType{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+[data-skin="opencode"] #view.enter>h2,[data-skin="opencode"] #view.enter .bar2 h2{animation:ocType .42s steps(16,end) both}
+[data-skin="opencode"] .field{caret-color:var(--m3)}
+[data-skin="opencode"] .field:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+[data-skin="opencode"] ::selection{background:var(--accent);color:var(--accent-ink)}
+@media (hover:hover){[data-skin="opencode"] .card.mrow:hover,[data-skin="opencode"] .entry:hover,[data-skin="opencode"] .evrow:hover{border-color:var(--accent);transform:none}}
+[data-skin="opencode"] .freebar .sbadge svg{animation:none}
+[data-skin="opencode"] .cell.off::before{background:repeating-linear-gradient(135deg,transparent 0 4px,color-mix(in srgb,var(--m3) 28%,transparent) 4px 5px)}

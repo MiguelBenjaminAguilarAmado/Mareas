@@ -41,6 +41,8 @@ Mareas es una aplicación web (PWA) para registrar cómo te sientes día a día 
 - **Pomodoro** con ciclos de concentración y descanso, asignatura por sesión, aviso sonoro/vibración/notificación y estadísticas de estudio de los últimos 7 días.
 - **Nivel de estrés** estimado a partir de exámenes, entregas y tareas pendientes cruzados con tu ánimo: índice de hoy, previsión de 21 días, resumen por semanas, avisos de acumulación y comparación de tu ánimo en días cargados y tranquilos. Es una estimación orientativa, no un diagnóstico.
 - **Agenda** de tareas, exámenes, entregas y clases puntuales, con asignatura, fecha, hora, prioridad, estado de hecho y aviso. Vistas de pendientes, día y semana.
+- **Días libres** (Más → Días libres): vacaciones, puentes y festivos, de un solo día o de **varios días seguidos** (campo «Hasta»), o repetidos cada año. En un día libre no hay clases en el horario (vista de día y de semana), no suma a las horas lectivas, no pesa en el nivel de estrés y, si lo eliges, añade una actividad a tus entradas. Se ven marcados en el calendario (mes y año), en el horario, en el inicio y en su propia lista (ahora, próximos y pasados). Los festivos importados también cuentan.
+- **Períodos** (Más → Períodos): menú propio, separado de Asignaturas, notas y metas. Trimestres, cuatrimestres o evaluaciones comunes a todas las asignaturas, con estado (terminado, en curso, próximo), media y número de notas. Se pueden crear, editar y eliminar (si no tienen notas).
 
 ### 🧠 Estado anímico y conexiones
 - **Estado anímico:** análisis de 7 días, 30 días o 3 meses con diagnóstico (nivel, tendencia, estabilidad, rachas bajas, escalas, carga escolar, día más bajo), avisos y pautas concretas para mejorar. Es orientativo, no un diagnóstico clínico.
@@ -63,6 +65,16 @@ Mareas es una aplicación web (PWA) para registrar cómo te sientes día a día 
 
 ### 📦 Mega-packs
 Un único archivo con TODO (entradas, personas, escalas, objetivos, agenda escolar, ajustes y fotos/vídeos). Se importa combinando con tus datos o reemplazándolo todo.
+
+### 👤 Cuenta de Mareas
+- **Menú propio** (Más → Cuenta de Mareas, y desde Ajustes) con foto de perfil, nombre, descripción, fecha de inicio y días usando la app.
+- Estadísticas rápidas: días registrados, entradas y consistencia de los últimos 30 días.
+- Secciones: **Perfil personal**, **Mi recorrido** (rachas, ánimo medio, entradas por mes y actividades más frecuentes), **Personalización**, **Mis datos** (nube, copias y exportación), **Privacidad** y **Desarrollador** (claves MCP).
+- El perfil se exporta y se sincroniza con el resto de tus datos.
+
+### 👋 Primer uso
+- **Tutorial de bienvenida** de 7 pasos la primera vez que se abre la app (se puede saltar y repetir desde Ajustes).
+- La app arranca vacía: ya no incluye entradas ni objetivos de ejemplo.
 
 ### 🎨 Apariencia
 Seis estilos visuales sobre el mismo código, con diseño adaptado a móvil, tablet vertical y pantallas anchas (iPad horizontal y ordenador: barra lateral, dos columnas y ventanas centradas):
@@ -109,10 +121,25 @@ Con la nube activada puedes dejar que un asistente de IA compatible con MCP cons
 - HTML, CSS y JavaScript puros, sin frameworks ni librerías.
 - Iconos SVG propios en un sprite único.
 - Grafo de relaciones con motor de física propio sobre `canvas` (sin librerías).
-- Service Worker con caché para funcionar sin conexión y aviso de nueva versión.
+- Service Worker con caché para funcionar sin conexión y aviso de nueva versión (detecta cambios con ETag, sin releer los archivos).
+- Guardado agrupado: varias acciones seguidas escriben una sola vez en `localStorage`, y se fuerza al ocultar o cerrar la página.
 - Capa de animaciones común (cascada de entrada, pulsaciones con rebote, barras que crecen, paneles con transición) que respeta «reducir movimiento» del sistema.
 - Web App Manifest para la instalación como app.
 - Supabase (autenticación, PostgreSQL y Storage) consumido con `fetch`, sin librerías.
+
+## 📁 Estructura del proyecto
+
+```
+/                     index.html, style.css, sw.js, manifest.webmanifest, README.md
+├─ assets/
+│  ├─ icons/          iconos de la app (192 y 512 px)
+│  └─ Theme-assets/   imágenes y archivos que necesiten los estilos visuales
+├─ themes/            CSS de cada estilo (glass, android, opencode, paper)
+├─ supabase/          schema.sql, mcp.sql, MCP.md y functions/mareas-mcp/index.ts
+└─ dev-tools/         herramientas de desarrollo (no forman parte de la app)
+```
+
+`sw.js` y `manifest.webmanifest` deben quedarse en la raíz para que el service worker controle toda la app.
 
 ## 👤 Autor
 

@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://miguelbenjaminaguilaramado.github.io/Mareas/sitemap.xml

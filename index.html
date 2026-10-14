@@ -2,18 +2,36 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#201d1d">
+<meta name="description" content="Mareas: diario de ánimo y agenda escolar. Registra cómo te sientes, organiza asignaturas y horario, y conoce tu evolución con tus datos guardados en tu dispositivo.">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="keywords" content="diario de ánimo, bienestar emocional, agenda escolar, horario de clases, notas, estudio, Mareas">
+<link rel="canonical" href="https://miguelbenjaminaguilaramado.github.io/Mareas/">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="es_ES">
+<meta property="og:site_name" content="Mareas">
+<meta property="og:title" content="Mareas — Diario de ánimo y agenda escolar">
+<meta property="og:description" content="Registra tu ánimo, organiza tus estudios y descubre cómo evoluciona tu año con Mareas.">
+<meta property="og:url" content="https://miguelbenjaminaguilaramado.github.io/Mareas/">
+<meta property="og:image" content="https://miguelbenjaminaguilaramado.github.io/Mareas/assets/icons/icon-512.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Mareas — Diario de ánimo y agenda escolar">
+<meta name="twitter:description" content="Un diario de ánimo y agenda escolar para organizar tu día y entender tu evolución.">
+<meta name="twitter:image" content="https://miguelbenjaminaguilaramado.github.io/Mareas/assets/icons/icon-512.png">
+<link rel="sitemap" type="application/xml" href="sitemap.xml">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Mareas","url":"https://miguelbenjaminaguilaramado.github.io/Mareas/","applicationCategory":"LifestyleApplication","operatingSystem":"Web, iOS, Android","inLanguage":"es","description":"Diario de ánimo y agenda escolar para registrar el bienestar, organizar asignaturas y horario, y revisar la evolución personal."}</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="assets/icons/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icons/icon-192.png">
 <link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="Themes/glass.css">
-<link rel="stylesheet" href="Themes/android.css">
-<link rel="stylesheet" href="Themes/opencode.css">
-<title>Mareas</title>
+<link rel="stylesheet" href="themes/glass.css">
+<link rel="stylesheet" href="themes/android.css">
+<link rel="stylesheet" href="themes/opencode.css">
+<link rel="stylesheet" href="themes/paper.css">
+<title>Mareas — Diario de ánimo y agenda escolar</title>
 </head>
 <body>
 
@@ -296,30 +314,26 @@ function defCats(){return DEFAULT_CATS.map(function(c){return {id:c[0],name:c[1]
 var S=null, memOnly=false;
 function load(){try{var r=localStorage.getItem(KEY);if(r){var o=JSON.parse(r);if(o&&Array.isArray(o.entries)&&Array.isArray(o.acts))return o;}}catch(e){}return null;}
 var ver=0;function touch(){ver++;}
-function save(){touch();S.t=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){memOnly=true;}kvSchedule();syncSchedule();}
+/* el guardado se agrupa: varias acciones seguidas escriben una sola vez y se fuerza al ocultar o cerrar la página */
+var saveT=0,saveDirty=false;
+function saveFlush(){if(!saveDirty)return;saveDirty=false;clearTimeout(saveT);try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){memOnly=true;}}
+function save(){touch();S.t=Date.now();saveDirty=true;clearTimeout(saveT);saveT=setTimeout(saveFlush,250);kvSchedule();syncSchedule();}
+window.addEventListener('pagehide',saveFlush);window.addEventListener('beforeunload',saveFlush);
+document.addEventListener('visibilitychange',function(){if(document.hidden)saveFlush();});
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
-function seed(){
-  var rnd=mulberry(11),now=Date.now(),out=[];
-  var bonus={ejercicio:.8,amigos:.7,aire:.6,meditar:.5,dormir:.7,pareja:.5,trabajo:-.5,compras:-.1};
-  var notes=['Día tranquilo.','Mucho trabajo pero salió bien.','Paseo largo al atardecer.','Me costó arrancar.','Cena con amigos, risas.','Dormí poco.','','','',''];
-  for(var i=0;i<21;i++){
-    var n=rnd()<.3?2:1;
-    for(var j=0;j<n;j++){
-      var pool=DEFAULT_ACTS.slice().sort(function(){return rnd()-.5;}).slice(0,2+Math.floor(rnd()*3));
-      var b=0;pool.forEach(function(a){b+=bonus[a.id]||0;});
-      var mood=Math.max(1,Math.min(5,Math.round(3+(rnd()-.45)*2.2+b*.9)));
-      var ts=sod(addDays(new Date(),-i)).getTime()+(j?20:9+Math.floor(rnd()*4))*3600000+Math.floor(rnd()*3600000);
-      if(ts>now)ts=now-3600000*(1+j);
-      out.push({id:'e'+i+'_'+j,ts:ts,mood:mood,acts:pool.map(function(a){return a.id;}),note:notes[Math.floor(rnd()*notes.length)],ex:true});
-    }
-  }
-  return out;
+/* datos de ejemplo: ya no se generan; esto limpia los que hubiera de versiones anteriores */
+function purgeExamples(){
+  var n=0;
+  if(S&&Array.isArray(S.entries)){var l=S.entries.length;S.entries=S.entries.filter(function(e){return !e.ex;});n+=l-S.entries.length;}
+  if(S&&Array.isArray(S.goals)){var g=S.goals.length;S.goals=S.goals.filter(function(x){return !x.ex;});n+=g-S.goals.length;}
+  return n;
 }
-function exampleGoals(){return [{id:'gx1',act:'ejercicio',n:3,per:'week',ex:true},{id:'gx2',act:'meditar',n:8,per:'month',ex:true},{id:'gx3',act:'any',n:5,per:'week',ex:true}];}
 S=load();
-if(!S){S={v:1,acts:defActs(),cats:defCats(),entries:seed(),goals:exampleGoals(),scales:[],reminder:{on:false,time:'21:00'}};save();}
+if(!S){S={v:1,acts:defActs(),cats:defCats(),entries:[],goals:[],scales:[],reminder:{on:false,time:'21:00'}};save();}
+if(purgeExamples())save();
+if(!S.profile||!S.profile.since){ensureProfile();save();}
 if(!S.scales)S.scales=[];
-if(!S.goals){S.goals=S.entries.some(function(e){return e.ex;})?exampleGoals():[];save();}
+if(!S.goals){S.goals=[];save();}
 if(!S.reminder){S.reminder={on:false,time:'21:00'};}
 if(!S.cats){
   S.cats=defCats();
@@ -465,9 +479,10 @@ function scalesSettings(){
 }
 
 /* ---------- appearance ---------- */
-var SKINS=[['opencode','Open-Code','Terminal oscuro en monoespaciada.'],['minimal','Minimalista','Plano, limpio y con animaciones suaves.'],['lite','Lite','Como Minimalista, sin animaciones. Máximo ahorro.'],['glass','Liquid Glass','Cristal translúcido en azul cielo.'],['android','Android','Superficies tonales y esquinas suaves.'],['silicon','Apple Silicon','Negro puro, cristal y gradientes líquidos.']];
+var SKINS=[['paper','Papel','Cuaderno editorial: crema, tinta y serif.'],['opencode','Open-Code','Terminal oscuro en monoespaciada.'],['minimal','Minimalista','Plano, limpio y con animaciones suaves.'],['lite','Lite','Como Minimalista, sin animaciones. Máximo ahorro.'],['glass','Liquid Glass','Cristal translúcido en azul cielo.'],['android','Android','Superficies tonales y esquinas suaves.'],['silicon','Apple Silicon','Negro puro, cristal y gradientes líquidos.']];
 function skinPrev(k){
   if(k==='silicon')return '<span class="sk-prev" style="background:#000"><i style="left:-10px;top:-10px;width:60px;height:60px;border-radius:50%;background:#FF00CC;filter:blur(18px);opacity:.6"></i><i style="right:-8px;bottom:-12px;width:64px;height:64px;border-radius:50%;background:#00C9FF;filter:blur(18px);opacity:.55"></i><i style="left:8px;right:8px;top:8px;height:24px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:14px"></i><i style="left:8px;top:38px;width:50px;height:18px;background:linear-gradient(135deg,#00A3FF,#5E5CE6);border-radius:10px"></i></span>';
+  if(k==='paper')return '<span class="sk-prev" style="background:#F3EEE4;border:1px solid #D9D1C2"><i style="left:8px;top:6px;font-family:Georgia,serif;font-size:15px;line-height:1;color:#1F2321">Mareas</i><i style="left:8px;right:8px;top:26px;height:14px;background:#FBF8F2;border:1px solid #D9D1C2;border-radius:6px"></i><i style="left:8px;top:44px;width:46px;height:14px;background:#2F6B5E;border-radius:8px"></i></span>';
   if(k==='opencode')return '<span class="sk-prev" style="background:#201d1d;border:1px solid #3a3636;font-family:ui-monospace,Menlo,Consolas,monospace"><i style="left:8px;top:8px;color:#30d158;font-size:11px;line-height:1">$ mareas</i><i style="left:8px;right:8px;top:24px;height:12px;border:1px solid #3a3636;border-radius:4px"></i><i style="left:8px;top:42px;width:44px;height:14px;background:#007aff;border-radius:4px"></i></span>';
   if(k==='lite')return '<span class="sk-prev" style="background:#FAFAFA;border:1px solid #E4E4E4"><i style="left:8px;right:8px;top:8px;height:22px;background:#FFFFFF;border:1px solid #E4E4E4;border-radius:6px"></i><i style="left:8px;top:38px;width:46px;height:18px;background:#171717;border-radius:5px"></i><i style="right:8px;top:40px;width:22px;height:14px;border:1.5px dashed #999;border-radius:4px"></i></span>';
   if(k==='minimal')return '<span class="sk-prev" style="background:#FAFAFA;border:1px solid #E4E4E4"><i style="left:8px;right:8px;top:8px;height:22px;background:#FFFFFF;border:1px solid #E4E4E4;border-radius:6px"></i><i style="left:8px;top:38px;width:46px;height:18px;background:#171717;border-radius:5px"></i></span>';
@@ -480,9 +495,20 @@ function appearanceCard(){
 }
 
 /* ---------- normalize: valores por defecto de todos los módulos; se usa al restaurar copias e importar ---------- */
+function cleanProfile(p){
+  p=p&&typeof p==='object'?p:{};var sn=+p.since;
+  return {name:String(p.name||'').slice(0,40),bio:String(p.bio||'').slice(0,200),
+    av:typeof p.av==='string'&&p.av.indexOf('data:image/jpeg')===0&&p.av.length<=60000?p.av:'',
+    since:sn>0&&sn<=Date.now()+864e5?sn:0};
+}
+function ensureProfile(){
+  S.profile=cleanProfile(S.profile);
+  if(!S.profile.since){var pts=(S.entries||[]).map(function(e){return e.ts;}).filter(function(t){return t>0;});S.profile.since=pts.length?Math.min.apply(null,pts):Date.now();}
+}
 function normalize(){
+  ensureProfile();
   if(!Array.isArray(S.scales))S.scales=[];
-  if(!Array.isArray(S.goals))S.goals=S.entries.some(function(e){return e.ex;})?exampleGoals():[];
+  if(!Array.isArray(S.goals))S.goals=[];
   if(!S.reminder||typeof S.reminder!=='object')S.reminder={on:false,time:'21:00'};
   if(!Array.isArray(S.cats)){
     S.cats=defCats();
@@ -503,6 +529,7 @@ if(!Array.isArray(S.absences))S.absences=[];
   if(!S.sched||typeof S.sched!=='object')S.sched={ab:false,days:5,ref:Date.now()};
   if([5,6,7].indexOf(S.sched.days)<0)S.sched.days=5;
   if(!S.sched.ref)S.sched.ref=Date.now();
+  if(S.sched.schoolStart&&!/^\d{4}-\d\d-\d\d$/.test(S.sched.schoolStart))delete S.sched.schoolStart;
   if(!S.skin)S.skin='minimal';
   pomoEnsure();
   S.entries.forEach(function(e){if(!Array.isArray(e.acts))e.acts=[];});
@@ -832,7 +859,7 @@ function dotsHtml(l){
   return h+'</span>';
 }
 function weekFor(d){if(!S.sched.ab)return '';var n=Math.round((mondayOf(d)-mondayOf(new Date(S.sched.ref)))/(7*864e5));return (((n%2)+2)%2)===0?'A':'B';}
-function dayClasses(k){var d=pdate(k),wd=wdayOf(d);return wd<S.sched.days?clsFor(wd,weekFor(d)):[];}
+function dayClasses(k){var d=pdate(k),wd=wdayOf(d);return wd<S.sched.days&&!isFree(k)?clsFor(wd,weekFor(d)):[];}
 var QUOTES=['Hoy no tienes que hacerlo todo; basta con dar un paso pequeño.','Respirar hondo también es avanzar.','Los días grises no duran para siempre, y tú ya has superado muchos.','Descansar no es perder el tiempo, es recuperar fuerzas.','Cada registro es una forma de escucharte.','Ser amable contigo cuenta tanto como serlo con los demás.','No hace falta que todo salga perfecto para que el día valga la pena.','Un paseo corto puede cambiar la forma de ver un día entero.','Lo que sientes es válido, aunque no sepas explicarlo todavía.','Pedir ayuda es una señal de fortaleza.','Pequeños hábitos, grandes mareas.','Hoy es un buen día para empezar de nuevo, otra vez.','No te compares: cada persona navega su propio mar.','Agradecer una cosa pequeña puede aligerar el día.','Está bien ir despacio mientras sigas avanzando.','Dormir bien es una de las mejores formas de cuidarte.','Tu valor no depende de lo productivo que seas hoy.','Después de la marea baja siempre vuelve la alta.','Hablar de lo que te preocupa ya lo hace más ligero.','Un error es solo información sobre cómo seguir.','Date permiso para disfrutar de lo sencillo.','Tómate el tiempo que necesites; nadie lleva tu ritmo mejor que tú.','Lo difícil de hoy será tu experiencia de mañana.','Mueve el cuerpo un rato: la mente suele agradecerlo.','Rodéate de personas que te hagan sentir en casa.','Celebrar los pequeños logros también es avanzar.','Un día a la vez es suficiente.','No tienes que tener todas las respuestas hoy.','Cuida tus pensamientos como cuidarías a un buen amigo.','Cada ola pasa, y tú sigues aquí.','Hacer una pausa también es parte del camino.','Hoy puedes elegir una sola cosa que te haga bien.','El esfuerzo constante pesa más que la prisa.','Permítete sentir antes de intentar arreglarlo todo.','Un vaso de agua, un poco de aire y un respiro: a veces basta.','La constancia suave le gana a la perfección.','Estás aprendiendo, y aprender lleva tiempo.','Lo que hoy cuesta, mañana será más fácil.','Mereces el mismo cuidado que das a los demás.','Mira cuánto has avanzado, no solo cuánto falta.','Una conversación sincera puede cambiar tu semana.','Tus emociones son mensajeras, no enemigas.','Haz hoy algo que tu yo de mañana agradezca.','La calma se entrena, como cualquier otra cosa.','Estudiar un poco cada día pesa menos que mucho de golpe.','No todo se resuelve hoy, y eso está bien.','Sonreír a alguien también te sonríe a ti.','Hay días para rendir y días para recargar; ambos suman.','Confía en el proceso, aunque no lo veas completo.','El mar siempre vuelve a la calma.','Tu historia sigue escribiéndose, y hoy es una página más.','Sé paciente: florecer lleva su tiempo.'];
 function quoteIdx(){var t=todayKey().split('-');return Math.floor(dn(+t[0],+t[1]-1,+t[2]))%QUOTES.length;}
 function quoteCard(){
@@ -1076,8 +1103,10 @@ function openPrev(id){
     '<div class="row" style="gap:14px">'+face(e.mood,64)+'<div><div style="font-weight:700;font-size:20px">'+esc(MOODS[e.mood].n)+'</div><div class="muted small" style="text-transform:capitalize">'+esc(F_DAY.format(d))+' · '+esc(F_TIME.format(d))+'</div></div></div>'+
     (e.title?'<h2>'+esc(e.title)+'</h2>':'')+
     (acts.length?'<div class="stack" style="gap:6px"><h3>Actividades</h3><div class="chips" style="margin:0">'+acts.map(function(a){return '<span class="chip">'+ic(a.icon,14)+esc(a.name)+'</span>';}).join('')+'</div></div>':'')+
+    (matchText(e)?'<div class="stack" style="gap:6px"><h3>Fútbol · partido</h3><div class="chips" style="margin:0">'+matchChip(e)+'</div></div>':'')+
     (lk?'<div class="stack" style="gap:6px"><h3>Con quién y detalle</h3><div class="chips" style="margin:0">'+lk+'</div></div>':'')+
     (sc?'<div class="stack" style="gap:6px"><h3>Escalas</h3><div class="chips" style="margin:0">'+sc+'</div></div>':'')+
+    (e.quote?'<div class="stack" style="gap:6px"><h3>Frase del día</h3><p class="note" style="margin:0;font-size:15px;font-style:italic">«'+esc(e.quote)+'»</p></div>':'')+
     (e.note?'<div class="stack" style="gap:6px"><h3>Nota</h3><p class="note" style="margin:0;font-size:15px">'+esc(e.note)+'</p></div>':'')+
     (m.length?'<div class="stack"><h3>Fotos y vídeos ('+m.length+')</h3><div class="mgrid">'+m.map(function(x,i){return '<span class="mth" role="button" tabindex="0" data-a="view" data-e="'+esc(e.id)+'" data-v="'+i+'" aria-label="Ver archivo '+(i+1)+'">'+thumbHtml(x)+'</span>';}).join('')+'</div></div>':'')+'</div>';
   $sheet.classList.add('open');hydrate($sheet);
@@ -1152,20 +1181,39 @@ function sdev(a){if(a.length<2)return 0;var m=mean(a);return Math.sqrt(mean(a.ma
 function persById(id){if(id==='self')return {id:'self',name:'Yo',color:'var(--accent)',cat:'',g:[],tr:0};for(var i=0;i<S.people.length;i++)if(S.people[i].id===id)return S.people[i];return null;}
 function subById(id){for(var i=0;i<S.subs.length;i++)if(S.subs[i].id===id)return S.subs[i];return null;}
 function connActs(){return S.acts.filter(function(a){return a.conn;});}
+function footballActs(){return S.acts.filter(function(a){return a.football;});}
+function matchText(e){var m=e&&e.match;if(!m)return '';return [m.home&&m.away?m.home+' '+(m.result||'')+' '+m.away:[m.home,m.away].filter(Boolean).join(' · '),m.competition].filter(Boolean).join(' · ');}
+function matchChip(e){var t=matchText(e);return t?'<span class="chip">'+ic('sport',14)+esc(t)+'</span>':'';}
 function linkChips(e){
-  var h=sleepChip(e);
+  var h=sleepChip(e)+matchChip(e);
   (e.pp||[]).forEach(function(id){var p=persById(id);if(p)h+='<span class="chip">'+ic('users',14)+esc(p.name)+'</span>';});
   (e.sub||[]).forEach(function(id){var s=subById(id);if(s)h+='<span class="chip">'+ic(s.icon||'star',14)+esc(s.name)+'</span>';});
   return h;
 }
+function connPeopleHtml(){
+  var q=(document.getElementById('connPeopleQ')||{}).value||'',cat=(document.getElementById('connPeopleCat')||{}).value||'';
+  var freq={};S.entries.forEach(function(e){(e.pp||[]).forEach(function(id){freq[id]=(freq[id]||0)+1;});});
+  var all=S.people.slice().sort(function(a,b){return (freq[b.id]||0)-(freq[a.id]||0)||byName(a,b);});
+  if(q)all=all.filter(function(p){return plain(p.name).indexOf(plain(q))>-1;});
+  if(cat)all=all.filter(function(p){return p.cat===cat;});
+  return all.length?'<div class="acts">'+all.map(function(p,i){var on=ed.pp.indexOf(p.id)>-1;return (i===10&&!q&&!cat?'<span class="small muted" style="grid-column:1/-1">Resto de contactos</span>':'')+'<button class="act'+(on?' on':'')+'" data-a="pers" data-v="'+esc(p.id)+'" aria-pressed="'+on+'">'+perBadge(p,26)+'<span>'+esc(p.name)+'</span></button>';}).join('')+'</div>':'<p class="muted small" style="margin:0">No hay contactos que coincidan.</p>';
+}
+function refreshConnPeople(){var l=document.getElementById('connPeopleList');if(l)l.innerHTML=connPeopleHtml();}
+document.addEventListener('input',function(ev){if(ev.target&&ev.target.id==='connPeopleQ')refreshConnPeople();});
+document.addEventListener('change',function(ev){if(ev.target&&ev.target.id==='connPeopleCat')refreshConnPeople();});
+document.addEventListener('input',function(ev){var t=ev.target;if(!ed||!t)return;var m={matchHome:'home',matchAway:'away',matchResult:'result',matchCompetition:'competition'},k=m[t.id];if(k){ed.match=ed.match||{};ed.match[k]=t.value;}});
 /* bloque del editor: personas (acción Conexiones) y sub-acciones de las acciones elegidas */
 function advHtml(){
   var h='',sel=ed.acts.map(actById).filter(Boolean);
   if(sel.some(function(a){return a.sleep;}))h+=sleepEditor();
-  {
-    var ps=S.people.slice().sort(byName);
-    h+='<div class="stack"><h3>Con quién</h3>'+(ps.length?'<div class="acts">'+ps.map(function(p){var on=ed.pp.indexOf(p.id)>-1;return '<button class="act'+(on?' on':'')+'" data-a="pers" data-v="'+esc(p.id)+'" aria-pressed="'+on+'">'+perBadge(p,26)+'<span>'+esc(p.name)+'</span></button>';}).join('')+'</div>':'<p class="muted small" style="margin:0">Aún no has añadido a nadie. Escribe un nombre abajo.</p>')+
+  if(sel.some(function(a){return a.conn;})){
+    var cats=PCATS.filter(function(c){return S.people.some(function(p){return p.cat===c[0];});});
+    h+='<div class="stack"><h3>Con quién</h3>'+(S.people.length?'<div class="row"><input id="connPeopleQ" class="field" style="flex:1;min-width:0" placeholder="Buscar por nombre" autocomplete="off"><select id="connPeopleCat" class="field" style="flex:1;min-width:0" aria-label="Filtrar contactos"><option value="">Todas las categorías</option>'+cats.map(function(c){return '<option value="'+esc(c[0])+'">'+esc(c[1])+'</option>';}).join('')+'</select></div><div id="connPeopleList">'+connPeopleHtml()+'</div>':'<p class="muted small" style="margin:0">Aún no has añadido a nadie. Escribe un nombre abajo.</p>')+
       '<div class="row"><input id="pNew" class="field" style="flex:1;min-width:0" maxlength="30" placeholder="Añadir persona nueva" autocomplete="off"><button class="btn sm" data-a="pAdd">'+ic('plus',16)+'Añadir</button></div></div>';
+  }
+  if(sel.some(function(a){return a.football;})){
+    ed.match=ed.match||{};
+    h+='<div class="stack"><h3>Fútbol · partido</h3><div class="twin"><input id="matchHome" class="field" maxlength="60" placeholder="Equipo local" value="'+esc(ed.match.home||'')+'"><input id="matchAway" class="field" maxlength="60" placeholder="Equipo visitante" value="'+esc(ed.match.away||'')+'"></div><div class="twin"><input id="matchResult" class="field" maxlength="20" placeholder="Resultado (por ejemplo 2-1)" value="'+esc(ed.match.result||'')+'"><input id="matchCompetition" class="field" maxlength="60" placeholder="Competición" value="'+esc(ed.match.competition||'')+'"></div></div>';
   }
   sel.forEach(function(a){
     var ss=S.subs.filter(function(s){return s.parent===a.id;}).sort(byName);
@@ -1361,7 +1409,7 @@ function trustButtons(act,pid,cur){
 var GKEY='mareas.graph.v1';
 var GCAT={familiar:'#F76B15',pareja:'#E93D82',amigo:'#30A46C',conocido:'#0091FF',none:'#8A8F98'};
 var GGRP='#8E4EC6';
-var GDEF={q:'',orph:true,yo:true,grp:true,co:false,arrows:true,local:false,depth:2,cby:'cat',fade:.15,nsz:1,lw:1.2,fc:.35,fr:.5,fl:.5,fd:90};
+var GDEF={q:'',orph:true,yo:true,grp:true,co:false,arrows:true,local:false,heat:false,depth:2,cby:'cat',fade:.15,nsz:1,lw:1.2,fc:.35,fr:.5,fl:.5,fd:90};
 var GFILT={q:1,orph:1,yo:1,grp:1,co:1,local:1,depth:1};
 var GFORCE={fc:1,fr:1,fl:1,fd:1};
 var G={cfg:null,store:{},nodes:[],links:[],vn:[],vl:[],base:null,bset:{},alpha:1,target:0,raf:0,last:0,dirty:true,k:1,tx:0,ty:0,W:0,H:0,dpr:1,cv:null,ctx:null,ro:null,sel:'',hov:'',drag:null,ptr:{},pinch:null,ft:null,user:false,frame:0,tl:null,imgs:{},col:null,font:'sans-serif',animUntil:0,lastClick:null,rm:false,seen:false};
@@ -1539,19 +1587,24 @@ function gColors(){
 function gTick(){
   var c=G.cfg,n=G.vn,l=G.vl,a=G.alpha,N=n.length,i,j,A,B;
   var rep=100+c.fr*900,pull=.004+c.fc*.05,kL=.03+c.fl*.4;
-  for(i=0;i<N;i++){
-    A=n[i];
-    for(j=i+1;j<N;j++){
-      B=n[j];
+  /* Repulsión local con una cuadrícula espacial: evita revisar todos los pares O(n²). */
+  var cell=600,grid={},cells=[];
+  for(i=0;i<N;i++){A=n[i];var cx=Math.floor(A.x/cell),cy=Math.floor(A.y/cell),key=cx+':'+cy,bin=grid[key];if(!bin){bin=grid[key]={x:cx,y:cy,n:[]};cells.push(bin);}bin.n.push(A);}
+  function repel(A,B){
       var dx=B.x-A.x,dy=B.y-A.y,d2=dx*dx+dy*dy;
-      if(d2>360000)continue;
+      if(d2>360000)return;
       if(d2<1){dx=Math.random()-.5;dy=Math.random()-.5;d2=dx*dx+dy*dy+.01;}
       var d=Math.sqrt(d2),f=rep*a/d2,fx=dx*f,fy=dy*f;
       A.vx-=fx;A.vy-=fy;B.vx+=fx;B.vy+=fy;
       var m=A.r+B.r+8;
       if(d<m){var p=(m-d)/d*.25;A.x-=dx*p;A.y-=dy*p;B.x+=dx*p;B.y+=dy*p;}
-    }
   }
+  cells.forEach(function(bin){for(var x=0;x<=1;x++)for(var y=-1;y<=1;y++){
+    if(x===0&&y<0)continue;
+    var other=grid[(bin.x+x)+':'+(bin.y+y)];if(!other)continue;
+    if(other===bin){for(i=0;i<bin.n.length;i++)for(j=i+1;j<bin.n.length;j++)repel(bin.n[i],bin.n[j]);}
+    else for(i=0;i<bin.n.length;i++)for(j=0;j<other.n.length;j++)repel(bin.n[i],other.n[j]);
+  }});
   for(i=0;i<l.length;i++){
     var k=l[i];A=k.a;B=k.b;
     var ex=B.x-A.x,ey=B.y-A.y,len=Math.sqrt(ex*ex+ey*ey)||.01;
@@ -1675,6 +1728,7 @@ function gDraw(ts){
       else ctx.arc(px,py,r+3,0,6.2832);
       ctx.stroke();
     }
+    if(c.heat&&n.type==='p'&&n.id!=='self'&&n.tr){var heat=['#e65f59','#e68b55','#dfba4d','#91ba58','#40a77b'][Math.max(0,Math.min(4,n.tr-1))];ctx.globalAlpha=(dim?.5:1)*bf;ctx.lineWidth=4;ctx.strokeStyle=heat;ctx.beginPath();ctx.arc(px,py,r+5,0,6.2832);ctx.stroke();}
     var showL=(rel&&rel[n.id])||n.id===G.sel||la>.02;
     if(showL){
       var al=(rel&&rel[n.id])||n.id===G.sel?1:la;
@@ -1821,7 +1875,7 @@ function vGraph(){
   h+='<div id="gSel" class="stack"></div>';
   h+='<details class="card"><summary><b>Lista de personas</b></summary><div class="stack" style="gap:6px;margin-top:10px">'+S.people.concat([{id:'self',name:'Yo',color:'var(--accent)'}]).slice().sort(function(a,b){return a.id==='self'?-1:b.id==='self'?1:byName(a,b);}).map(function(p){var cnt=S.rels.filter(function(r){return r.a===p.id||r.b===p.id;}).length;return '<button class="mrow" data-g="sel" data-v="'+esc(p.id)+'" style="padding:4px 0">'+perBadge(persById(p.id)||p,30)+'<span class="mid"><b>'+esc(p.name)+'</b><span class="small muted">'+cnt+(cnt===1?' conexión':' conexiones')+'</span></span></button>';}).join('')+'</div></details></div>';
   h+='<div class="gside stack">';
-  h+='<details class="card gsec" open><summary>Filtros</summary><div class="stack"><input id="gQ" class="field" type="search" data-gc="q" value="'+esc(c.q)+'" placeholder="Buscar: nombre, cat:amigo, grupo:clase, conf:>=4, -nombre" aria-label="Buscar y filtrar" autocomplete="off"><span class="small muted">Prefijos: <b>cat:</b> <b>grupo:</b> <b>conf:</b> <b>ciudad:</b> <b>pais:</b> <b>tipo:</b> <b>con:</b>. Con <b>-</b> delante se excluye.</span>'+gSw('orph','Personas sin conexiones')+gSw('yo','Mostrarme a mí','El nodo «Yo»')+gSw('grp','Grupos como nodos','Rombos unidos a sus miembros')+gSw('co','Co-apariciones','Une a quienes salen juntos en tus entradas y eventos')+gSw('local','Modo local','Solo el entorno de la persona seleccionada')+gRg('depth','Profundidad',1,5,1)+'</div></details>';
+  h+='<details class="card gsec" open><summary>Filtros</summary><div class="stack"><input id="gQ" class="field" type="search" data-gc="q" value="'+esc(c.q)+'" placeholder="Buscar: nombre, cat:amigo, grupo:clase, conf:>=4, -nombre" aria-label="Buscar y filtrar" autocomplete="off"><span class="small muted">Prefijos: <b>cat:</b> <b>grupo:</b> <b>conf:</b> <b>ciudad:</b> <b>pais:</b> <b>tipo:</b> <b>con:</b>. Con <b>-</b> delante se excluye.</span>'+gSw('orph','Personas sin conexiones')+gSw('yo','Mostrarme a mí','El nodo «Yo»')+gSw('grp','Grupos como nodos','Rombos unidos a sus miembros')+gSw('co','Co-apariciones','Une a quienes salen juntos en tus entradas y eventos')+gSw('local','Modo local','Solo el entorno de la persona seleccionada')+gSw('heat','Mapa de calor de confianza','Anillo rojo = baja · verde = alta')+gRg('depth', 'Profundidad',1,5,1)+'</div></details>';
   h+='<details class="card gsec" open><summary>Grupos de color</summary><div class="stack"><label class="gl"><span class="small">Color base</span><select class="field" data-gc="cby"><option value="cat"'+(c.cby==='cat'?' selected':'')+'>Por categoría</option><option value="own"'+(c.cby==='own'?' selected':'')+'>Color de cada persona</option></select></label><span class="small muted">La primera regla que coincida gana. Usa la misma sintaxis que el buscador.</span><div id="gCols" class="stack" style="gap:8px">'+gColsHtml()+'</div><div><button class="btn sm ghost" data-g="coladd">'+ic('plus',16)+' Nuevo grupo de color</button></div><div class="chips">'+PCATS.concat([['none','Sin categoría']]).map(function(x){return '<span class="chip"><i class="dot" style="background:'+GCAT[x[0]]+'"></i>'+esc(x[1])+'</span>';}).join('')+'</div></div></details>';
   h+='<details class="card gsec"><summary>Visualización</summary><div class="stack">'+gSw('arrows','Flechas','Indican quién registró la relación hacia quién')+gRg('fade',"Desvanecer texto",0,1,.05)+gRg('nsz','Tamaño de nodos',.4,2.2,.1)+gRg('lw','Grosor de enlaces',.4,4,.1)+'<div><button class="btn sm ghost" data-g="tl">'+ic('play',16)+' Animar evolución</button></div></div></details>';
   h+='<details class="card gsec"><summary>Fuerzas</summary><div class="stack">'+gRg('fc','Fuerza central',0,1,.01)+gRg('fr','Fuerza de repulsión',0,1,.01)+gRg('fl','Fuerza de enlaces',0,1,.01)+gRg('fd','Distancia de enlaces',30,300,5)+'<div><button class="btn sm ghost" data-g="forces">Restablecer fuerzas</button></div></div></details>';
@@ -1957,7 +2011,7 @@ function delPer(){
   S.rels=S.rels.filter(function(r){return r.a!==id&&r.b!==id;});
   /* las entradas y los eventos se conservan: solo se les quita el vínculo */
   S.entries.concat(S.events,S.days).forEach(function(e){if(e.pp){e.pp=e.pp.filter(function(x){return x!==id;});if(!e.pp.length)delete e.pp;}});
-  if(ui.perSel===id){ui.perSel=null;ui.tab='people';}
+  if(ui.perSel===id){ui.perSel=null;goTab('people');}
   save();closeEditor();render(true);
 }
 /* grupos de personas */
@@ -2079,7 +2133,7 @@ function elapsedTxt(date){
 /* todas las fechas: registros propios + las derivadas de las fichas de personas (sin copiarlas) */
 function dyAll(){
   var l=[];
-  S.days.forEach(function(x){l.push({src:'day',id:x.id,name:x.name,dtype:x.dtype,date:x.date,rec:x.rec==='yearly',rule:x.leap||'feb28',pp:x.pp||[],el:!!x.el});});
+  S.days.forEach(function(x){l.push({src:'day',id:x.id,name:x.name,dtype:x.dtype,date:x.date,rec:x.rec==='yearly',rule:x.leap||'feb28',pp:x.pp||[],el:!!x.el,dayoff:!!x.dayoff,dayAct:x.dayAct||'',end:dayEnd(x)});});
   S.people.forEach(function(p){
     if(p.bd)l.push({src:'bd',id:p.id,pid:p.id,name:'Cumpleaños de '+p.name,dtype:'birthday',date:p.bd,rec:true,rule:p.bl||'feb28',pp:[p.id],el:false});
     (p.fd||[]).forEach(function(f){l.push({src:'fd',id:p.id+':'+f.id,pid:p.id,name:f.t+' · '+p.name,dtype:'custom',date:f.d,rec:!!f.y,rule:f.l||'feb28',pp:[p.id],el:false});});
@@ -2091,8 +2145,21 @@ function dyOcc(it,y){
   if(it.rec)return y<sy?null:occIn(it.date,y,it.rule);
   return sy===y?it.date:null;
 }
-function dyNext(it,from){if(!it.rec)return it.date>=from?{k:it.date,n:0}:null;return nextOccR(it.date,it.rule,from);}
-function dyMonth(y,mo){var m={},pre=pad4(y)+'-'+pad(mo+1)+'-';dyAll().forEach(function(it){var k=dyOcc(it,y);if(k&&k.indexOf(pre)===0)(m[k]=m[k]||[]).push(it);});return m;}
+function dyNext(it,from){
+  if(!it.rec){if(it.date>=from)return {k:it.date,n:0};return it.end&&it.end>=from?{k:from,n:0}:null;}
+  return nextOccR(it.date,it.rule,from);
+}
+function dyMonth(y,mo){
+  var m={},pre=pad4(y)+'-'+pad(mo+1)+'-',last=new Date(y,mo+1,0).getDate();
+  dyAll().forEach(function(it){
+    var k=dyOcc(it,y);if(k&&k.indexOf(pre)===0)(m[k]=m[k]||[]).push(it);
+    if(!it.rec&&it.end&&it.end>it.date){
+      var from=it.date>pre+'01'?it.date:pre+'01',to=it.end<pre+pad(last)?it.end:pre+pad(last);
+      for(var d=pdate(from),e=pdate(to);d<=e;d.setDate(d.getDate()+1)){var kk=dkey(d.getTime());if(kk!==k)(m[kk]=m[kk]||[]).push(it);}
+    }
+  });
+  return m;
+}
 function dyNTxt(it,n){
   if(!it.rec||n<=0)return '';
   return it.dtype==='birthday'?'Cumple '+n:n+(n===1?' año':' años');
@@ -2100,17 +2167,59 @@ function dyNTxt(it,n){
 function dyLeapTxt(it){return it.rec&&it.date.slice(5)==='02-29'?(LEAPS.filter(function(x){return x[0]===it.rule;})[0]||LEAPS[0])[1].toLowerCase():'';}
 function dyOpenAttr(it){return it.src==='day'?'data-a="dayView" data-v="'+esc(it.id)+'"':'data-a="person" data-v="'+esc(it.pid)+'"';}
 function dyRow(it,k,n,withWhen){
-  var t=dtype(it.dtype),sub=[dyNTxt(it,n),it.src==='day'&&it.el?elapsedTxt(it.date):''].filter(Boolean).join(' · '),
+  var t=dtype(it.dtype),sub=[dyNTxt(it,n),it.src==='day'&&it.dayoff?('Día libre'+(it.end&&it.end>it.date?' · '+freeRangeTxt(it):'')):'',it.src==='day'&&it.dayAct&&actById(it.dayAct)?'Activa '+actById(it.dayAct).name:'',it.src==='day'&&it.el?elapsedTxt(it.date):''].filter(Boolean).join(' · '),
     who=it.src==='day'?it.pp.map(persById).filter(Boolean).map(function(p){return p.name;}).join(', '):'';
   return '<button class="card mrow" '+dyOpenAttr(it)+'><span class="sbadge" style="background:var(--accent-soft);color:var(--accent)">'+ic(it.src==='fd'?'star':t[2],22)+'</span><span class="mid"><b>'+esc(it.name)+'</b><span class="small muted">'+esc([t[1],withWhen?dayLabel(k):''].filter(Boolean).join(' · '))+'</span>'+(sub?'<span class="small muted">'+esc(sub)+'</span>':'')+(who?'<span class="small muted">'+esc(who)+'</span>':'')+'</span>'+(withWhen?'<span class="small muted" style="text-align:right">'+whenTxt(k)+'</span>':ic('right',18))+'</button>';
 }
 function dyDay(k){
   var y=+k.slice(0,4);
-  return dyAll().filter(function(it){return dyOcc(it,y)===k;}).map(function(it){return dyRow(it,k,it.rec?y-(+it.date.slice(0,4)):0,false);}).join('');
+  return dyAll().filter(function(it){return dyOcc(it,y)===k||(!it.rec&&it.end&&it.date<=k&&k<=it.end);}).map(function(it){return dyRow(it,k,it.rec?y-(+it.date.slice(0,4)):0,false);}).join('');
+}
+/* días libres: un día, un rango de días seguidos (campo end) o una fecha que se repite cada año */
+var F_SH=new Intl.DateTimeFormat('es',{day:'numeric',month:'short'});
+function dayEnd(x){
+  if(x.rec==='yearly'||!x.end||!validD(x.end)||x.end<x.date)return x.date;
+  var lim=dkey(pdate(x.date).getTime()+400*864e5);
+  return x.end>lim?lim:x.end;
+}
+function dayLen(x){return Math.round((pdate(dayEnd(x))-pdate(x.date))/864e5)+1;}
+function freeOn(k){
+  var y=+k.slice(0,4),r=[];
+  S.days.forEach(function(x){
+    if(!x.dayoff)return;
+    if(x.rec==='yearly'){if(dyOcc({date:x.date,rec:true,rule:x.leap||'feb28'},y)===k)r.push(x);}
+    else if(x.date<=k&&k<=dayEnd(x))r.push(x);
+  });
+  return r;
+}
+function isFree(k){return freeOn(k).length>0;}
+function freeSet(y){
+  var m={};
+  S.days.forEach(function(x){
+    if(!x.dayoff)return;
+    if(x.rec==='yearly'){var o=dyOcc({date:x.date,rec:true,rule:x.leap||'feb28'},y);if(o)m[o]=1;return;}
+    var a=x.date,b=dayEnd(x);if(a.slice(0,4)>String(y)||b.slice(0,4)<String(y))return;
+    for(var d=pdate(a),e=pdate(b);d<=e;d.setDate(d.getDate()+1)){if(d.getFullYear()===y)m[dkey(d.getTime())]=1;}
+  });
+  return m;
+}
+function freeRangeTxt(x){
+  if(dayLen(x)<2)return dayLabel(x.date);
+  return F_SH.format(pdate(x.date))+' – '+F_SH.format(pdate(dayEnd(x)))+' · '+dayLen(x)+' días';
+}
+function freeNames(frs){return frs.map(function(x){return x.name;}).join(', ');}
+function freeBanner(frs,k){
+  var acts=[];frs.forEach(function(x){if(x.dayAct&&actById(x.dayAct)&&acts.indexOf(actById(x.dayAct).name)<0)acts.push(actById(x.dayAct).name);});
+  return '<section class="card freebar" aria-label="Día libre"><span class="sbadge" style="background:var(--accent-soft);color:var(--accent)">'+ic('beach',22)+'</span><span class="mid"><b>Día libre · '+esc(freeNames(frs))+'</b><span class="small muted">'+esc(dayLabel(k))+' · Sin clases: no suman horas lectivas ni carga de estrés.'+(acts.length?' Se añade '+esc(acts.join(', '))+' a tus entradas.':'')+'</span></span></section>';
+}
+function dayoffActsFor(k){
+  var ids={};
+  freeOn(k).forEach(function(x){if(x.dayAct&&actById(x.dayAct))ids[x.dayAct]=1;});
+  return Object.keys(ids);
 }
 /* sección Días importantes */
 function vDays(){
-  var td=todayKey(),h=backBar('Días importantes','more')+'<div class="row" style="flex-wrap:wrap"><button class="btn sm" data-a="newDay">'+ic('plus',18)+' Nueva fecha</button></div>';
+  var td=todayKey(),h=backBar('Días importantes','more')+'<div class="row" style="flex-wrap:wrap"><button class="btn sm" data-a="newDay">'+ic('plus',18)+' Nueva fecha</button><button class="btn sm ghost" data-a="tab" data-v="holidays">'+ic('globe',16)+' Festividades y días libres</button></div>';
   var all=dyAll();
   h+='<section class="card stack" style="padding:12px"><select id="dyt" class="field" style="min-height:40px;padding:4px 8px" aria-label="Filtrar por tipo"><option value="">Todos los tipos</option>'+DTYPES.map(function(t){return '<option value="'+t[0]+'"'+(ui.dyT===t[0]?' selected':'')+'>'+t[1]+'</option>';}).join('')+'</select></section>';
   var rows=all.filter(function(it){return !ui.dyT||it.dtype===ui.dyT;}).map(function(it){var nx=dyNext(it,td);return {it:it,nx:nx};});
@@ -2123,6 +2232,97 @@ function vDays(){
   if(past.length)h+='<section class="day"><h3>Pasados ('+past.length+')</h3>'+past.map(function(r){return dyRow(r.it,r.it.date,0,true);}).join('')+'</section>';
   return h;
 }
+/* pantalla Días libres */
+function freeCountTxt(){
+  var n=S.days.filter(function(x){return x.dayoff;}).length;
+  return n?n+(n===1?' registrado':' registrados')+(isFree(todayKey())?' · hoy es libre':''):'Vacaciones, puentes y festivos';
+}
+function freeRow(x,nx,cur){
+  var act=x.dayAct&&actById(x.dayAct)?actById(x.dayAct).name:'',len=dayLen(x),yearly=x.rec==='yearly';
+  var when=cur?(len>1?'Hasta '+F_SH.format(pdate(dayEnd(x))):'Hoy'):(nx?whenTxt(nx.k):whenTxt(dayEnd(x)));
+  var range=yearly?'Cada año · '+dayLabel(nx?nx.k:x.date):freeRangeTxt(x);
+  return '<button class="card mrow" data-a="dayView" data-v="'+esc(x.id)+'"><span class="sbadge" style="background:var(--accent-soft);color:var(--accent)">'+ic('beach',22)+'</span><span class="mid"><b>'+esc(x.name)+'</b><span class="small muted">'+esc(range)+'</span>'+(act?'<span class="small muted">Activa '+esc(act)+'</span>':'')+'</span><span class="small muted" style="text-align:right">'+esc(when)+'</span></button>';
+}
+function vFree(){
+  var td=todayKey(),h=backBar('Días libres','more')+'<div class="row" style="flex-wrap:wrap"><button class="btn sm" data-a="newFree">'+ic('plus',18)+' Nuevo día libre</button><button class="btn sm ghost" data-a="tab" data-v="holidays">'+ic('globe',16)+' Importar festivos</button></div>';
+  var list=S.days.filter(function(x){return x.dayoff;});
+  var tf=freeOn(td),yr=new Date().getFullYear(),cnt=Object.keys(freeSet(yr)).length;
+  h+='<section class="card stack"><div class="tiles"><div class="tile"><b>'+(tf.length?'Libre':'Lectivo')+'</b><span class="small muted">hoy</span></div><div class="tile"><b>'+cnt+'</b><span class="small muted">días libres en '+yr+'</span></div></div><p class="small muted" style="margin:0">En un día libre no hay clases en tu horario, no cuenta para las horas lectivas, no suma carga de estrés y, si lo eliges, se añade una actividad a tus entradas. Puedes marcar varios días seguidos con «Hasta».</p></section>';
+  if(!list.length)return h+'<section class="card"><p class="muted" style="margin:0">Todavía no hay días libres. Pulsa «Nuevo día libre» para añadir vacaciones o puentes, o importa los festivos de tu país.</p></section>';
+  var cur=[],up=[],past=[];
+  list.forEach(function(x){
+    var it={date:x.date,rec:x.rec==='yearly',rule:x.leap||'feb28',end:dayEnd(x)},nx=dyNext(it,td),r={x:x,nx:nx,k:nx?nx.k:dayEnd(x)};
+    if(x.rec==='yearly'){(nx&&nx.k===td?cur:nx?up:past).push(r);}
+    else if(x.date<=td&&td<=dayEnd(x))cur.push(r);
+    else if(x.date>td)up.push(r);
+    else past.push(r);
+  });
+  var asc=function(a,b){return a.k<b.k?-1:a.k>b.k?1:0;};
+  cur.sort(asc);up.sort(asc);past.sort(function(a,b){return asc(b,a);});
+  if(cur.length)h+='<section class="day"><h3>Ahora ('+cur.length+')</h3>'+cur.map(function(r){return freeRow(r.x,r.nx,true);}).join('')+'</section>';
+  if(up.length)h+='<section class="day"><h3>Próximos ('+up.length+')</h3>'+up.map(function(r){return freeRow(r.x,r.nx,false);}).join('')+'</section>';
+  if(past.length)h+='<section class="day"><h3>Pasados ('+past.length+')</h3>'+past.slice(0,20).map(function(r){return freeRow(r.x,null,false);}).join('')+(past.length>20?'<span class="small muted">y '+(past.length-20)+' más antiguos…</span>':'')+'</section>';
+  return h;
+}
+function recapForYear(y){
+  var entries=S.entries.filter(function(e){return new Date(e.ts).getFullYear()===y;}),act={},months={},mins=0,subj={};
+  entries.forEach(function(e){e.acts.forEach(function(id){act[id]=(act[id]||0)+1;});var mo=new Date(e.ts).getMonth();months[mo]=(months[mo]||0)+1;});
+  S.sessions.forEach(function(s){if(new Date(s.ts).getFullYear()!==y)return;mins+=s.min;if(s.sid)subj[s.sid]=(subj[s.sid]||0)+s.min;});
+  var days={};entries.forEach(function(e){days[dkey(e.ts)]=1;});
+  var topActs=Object.keys(act).map(function(id){return {a:actById(id),n:act[id]};}).filter(function(x){return x.a;}).sort(function(a,b){return b.n-a.n;}).slice(0,3);
+  var topSub=Object.keys(subj).sort(function(a,b){return subj[b]-subj[a];})[0],topMonth=Object.keys(months).sort(function(a,b){return months[b]-months[a];})[0];
+  return {entries:entries,days:Object.keys(days).length,avg:entries.length?mean(entries.map(function(e){return e.mood;})):0,topActs:topActs,mins:mins,topSub:topSub?subjById(topSub):null,topSubMin:topSub?subj[topSub]:0,topMonth:topMonth===undefined?null:+topMonth,months:months};
+}
+function recapSlides(y){
+  var d=recapForYear(y),hours=Math.floor(d.mins/60),mm=d.mins%60;
+  return [
+    {title:'Tu año en Mareas',value:String(y),detail:d.entries.length+' entradas · '+d.days+' días registrados',color:'#355C7D'},
+    {title:'Tu ánimo del año',value:d.avg?num(d.avg)+'/5':'—',detail:d.avg?moodLabel(d.avg)[0]+' de media en '+d.entries.length+' entradas':'Aún no hay entradas para este año.',color:'#6C5B7B'},
+    {title:'Lo que más hiciste',value:d.topActs.length?d.topActs[0].a.name:'—',detail:d.topActs.length?d.topActs.map(function(x){return x.a.name+' · '+x.n;}).join('   /   '):'Registra actividades para ver tus favoritas.',color:'#C06C84'},
+    {title:'Tiempo de estudio',value:hours+' h '+mm+' min',detail:d.topSub?'Más tiempo en '+d.topSub.name+' · '+Math.floor(d.topSubMin/60)+' h '+(d.topSubMin%60)+' min':'Tiempo total de Pomodoro completado',color:'#6C9A8B'},
+    {title:'Tu mes más activo',value:d.topMonth===null?'—':new Intl.DateTimeFormat('es',{month:'long'}).format(new Date(y,d.topMonth,1)),detail:d.topMonth===null?'Todavía no hay registros.':d.months[d.topMonth]+' entradas ese mes',color:'#D08C60'}
+  ];
+}
+function vRecap(){
+  var y=ui.recapYear||new Date().getFullYear(),slides=recapSlides(y),i=Math.max(0,Math.min(slides.length-1,ui.recapSlide||0)),s=slides[i];ui.recapSlide=i;
+  var years={};S.entries.forEach(function(e){years[new Date(e.ts).getFullYear()]=1;});S.sessions.forEach(function(x){years[new Date(x.ts).getFullYear()]=1;});years[new Date().getFullYear()]=1;
+  return backBar('Resumen anual','more')+'<section class="card stack"><div class="row between"><h3 style="margin:0">Tu año en Mareas</h3><select id="recapYear" class="field" style="width:auto"><option value="'+y+'">'+y+'</option>'+Object.keys(years).map(Number).filter(function(k){return k!==y;}).sort(function(a,b){return b-a;}).map(function(k){return '<option value="'+k+'">'+k+'</option>';}).join('')+'</select></div><p class="small muted" style="margin:0">Un resumen en formato historia para guardar o compartir.</p><div class="recap-wrap"><div class="recap-progress">'+slides.map(function(_,n){return '<i class="'+(n<=i?'on':'')+'"></i>';}).join('')+'</div><article class="recap-story" style="--recap:'+s.color+'"><span class="recap-brand">Mareas · '+y+'</span><div class="recap-copy"><span class="recap-kicker">'+esc(s.title)+'</span><strong>'+esc(s.value)+'</strong><p>'+esc(s.detail)+'</p></div><span class="recap-count">'+(i+1)+' / '+slides.length+'</span></article></div><div class="row between"><button class="btn sm ghost" data-a="recapPrev"'+(i===0?' disabled':'')+'>'+ic('left',16)+' Anterior</button><div class="row"><button class="btn sm ghost" data-a="recapDownload">Descargar historia</button><button class="btn sm" data-a="recapShare">Compartir</button></div><button class="btn sm ghost" data-a="recapNext"'+(i===slides.length-1?' disabled':'')+'>Siguiente '+ic('right',16)+'</button></div><div id="recapMsg" class="msg" role="status"></div></section>';
+}
+function drawRecapImage(){
+  var y=ui.recapYear||new Date().getFullYear(),s=recapSlides(y)[ui.recapSlide||0],c=document.createElement('canvas');c.width=1080;c.height=1920;var x=c.getContext('2d'),g=x.createLinearGradient(0,0,1080,1920);g.addColorStop(0,s.color);g.addColorStop(1,'#17152a');x.fillStyle=g;x.fillRect(0,0,c.width,c.height);x.fillStyle='rgba(255,255,255,.12)';x.beginPath();x.arc(920,220,300,0,Math.PI*2);x.fill();x.fillStyle='#fff';x.textBaseline='top';x.font='600 42px system-ui';x.fillText('Mareas · '+y,84,100);x.font='600 44px system-ui';x.fillText(s.title,84,630);x.font='700 104px system-ui';var val=s.value;if(x.measureText(val).width>900){x.font='700 76px system-ui';}x.fillText(val,84,740,900);x.font='400 40px system-ui';var words=s.detail.split(/\s+/),line='',yy=920;words.forEach(function(w){var z=line?line+' '+w:w;if(x.measureText(z).width>850){x.fillText(line,84,yy);line=w;yy+=58;}else line=z;});if(line)x.fillText(line,84,yy);x.font='400 28px system-ui';x.fillText((ui.recapSlide||0)+1+' / '+recapSlides(y).length,84,1780);c.toBlob(function(blob){if(!blob)return;var a=document.createElement('a'),u=URL.createObjectURL(blob);a.href=u;a.download='mareas-resumen-'+y+'-'+((ui.recapSlide||0)+1)+'.png';a.click();setTimeout(function(){URL.revokeObjectURL(u);},1000);});
+}
+async function shareRecap(){
+  var y=ui.recapYear||new Date().getFullYear(),s=recapSlides(y)[ui.recapSlide||0],text=s.title+' · '+y+'\n'+s.value+'\n'+s.detail+'\n— Mareas';
+  try{if(navigator.share)await navigator.share({title:'Mi año en Mareas',text:text});else if(navigator.clipboard){await navigator.clipboard.writeText(text);var m=document.getElementById('recapMsg');if(m)m.textContent='Historia copiada al portapapeles.';}else{var m2=document.getElementById('recapMsg');if(m2)m2.textContent='Tu navegador no permite compartir desde aquí.';}}
+  catch(e){if(e.name!=='AbortError'){var m3=document.getElementById('recapMsg');if(m3)m3.textContent='No se pudo compartir esta historia.';}}
+}
+document.addEventListener('change',function(ev){if(ev.target&&ev.target.id==='recapYear'){ui.recapYear=+ev.target.value;ui.recapSlide=0;render(true);}});
+var holidayCountries=[],holidayData=[],holidaySelected={},holidayBusy=false,holidayMsg='',holidayCode='ES',holidayYear=new Date().getFullYear(),holidayAct='';
+function vHolidays(){
+  var h=backBar('Festividades y días libres','more')+'<section class="card stack"><h3>Importar festivos</h3><p class="muted small" style="margin:0">Carga los festivos públicos de un país y año. Revisa los festivos regionales antes de añadirlos: la lista puede incluir varias regiones.</p><div class="twin"><select id="holidayCountry" class="field" aria-label="País">'+(holidayCountries.length?holidayCountries.map(function(c){return '<option value="'+esc(c.countryCode)+'"'+(holidayCode===c.countryCode?' selected':'')+'>'+esc(c.name)+' ('+esc(c.countryCode)+')</option>';}).join(''):'<option value="ES">España (ES)</option>')+'</select><input id="holidayYear" class="field" type="number" min="2000" max="2100" value="'+holidayYear+'" aria-label="Año"></div><div class="stack" style="gap:6px"><h3>Actividad para los días libres</h3><select id="holidayAct" class="field"><option value="">No añadir actividad automáticamente</option>'+S.acts.slice().sort(byName).map(function(a){return '<option value="'+esc(a.id)+'"'+(holidayAct===a.id?' selected':'')+'>'+esc(a.name)+'</option>';}).join('')+'</select></div><button class="btn" data-a="holidayLoad"'+(holidayBusy?' disabled':'')+'>'+(holidayBusy?'Cargando…':'Cargar festividades')+'</button><div class="msg" role="status">'+esc(holidayMsg)+'</div></section>';
+  if(holidayData.length){
+    h+='<section class="card stack"><div class="row between"><h3 style="margin:0">Resultados ('+holidayData.length+')</h3><button class="btn sm" data-a="holidayImport">Añadir seleccionados</button></div>';
+    h+='<div class="stack" style="gap:6px">'+holidayData.map(function(x,i){var loc=x.localName||x.name||'Festivo',area=Array.isArray(x.counties)&&x.counties.length?' · '+x.counties.join(', '):'',checked=holidaySelected[i]!==false;return '<label class="row between card" style="padding:10px;gap:10px"><span class="mid"><b>'+esc(loc)+'</b><span class="small muted">'+esc(dayLabel(x.date))+esc(area)+(x.global?' · Nacional':' · Regional / local')+'</span></span><input type="checkbox" data-holiday-i="'+i+'" '+(checked?'checked':'')+' style="width:22px;height:22px;accent-color:var(--accent)"></label>';}).join('')+'</div></section>';
+  }
+  return h;
+}
+async function holidayLoad(){
+  if(holidayBusy)return;holidayBusy=true;holidayMsg='';render(true);
+  try{
+    if(!holidayCountries.length){var cr=await fetch('https://date.nager.at/api/v3/AvailableCountries');if(!cr.ok)throw new Error('No se pudieron cargar los países.');holidayCountries=await cr.json();holidayCountries.sort(function(a,b){return a.name.localeCompare(b.name,'es');});}
+    var yr=Math.max(2000,Math.min(2100,Math.round(+holidayYear)||new Date().getFullYear())),url='https://date.nager.at/api/v3/PublicHolidays/'+yr+'/'+encodeURIComponent(holidayCode),res=await fetch(url);if(!res.ok)throw new Error('No se encontraron festivos para ese país y año.');
+    var data=await res.json();holidayData=data.filter(function(x){return x&&validD(x.date)&&(!Array.isArray(x.types)||x.types.indexOf('Public')>-1);});holidaySelected={};holidayData.forEach(function(x,i){holidaySelected[i]=x.global===true;});holidayMsg=holidayData.length?'Selecciona los festivos que quieras importar.':'No hay festivos públicos para esos datos.';
+  }catch(e){holidayData=[];holidaySelected={};holidayMsg=e.message||'No se pudo conectar con el servicio de festivos.';}
+  holidayBusy=false;render(true);
+}
+function holidayImport(){
+  var added=0;
+  holidayData.forEach(function(x,i){if(holidaySelected[i]===false)return;var name=String(x.localName||x.name||'Festivo').slice(0,80);if(S.days.some(function(d){return d.date===x.date&&plain(d.name)===plain(name);}))return;
+    var o={id:nid('dy'),dtype:'custom',name:name,date:x.date,rec:'none',el:false,dayoff:true,holidaySource:holidayCode};if(holidayAct&&actById(holidayAct))o.dayAct=holidayAct;S.days.push(o);added++;
+  });
+  save();holidayMsg=added?'Se añadieron '+added+' días libres.': 'No se añadieron fechas nuevas; ya estaban guardadas o no había ninguna seleccionada.';holidayData=[];holidaySelected={};render(true);
+}
+document.addEventListener('change',function(ev){var t=ev.target;if(!t)return;if(t.id==='holidayCountry'){holidayCode=t.value;holidayData=[];holidaySelected={};holidayMsg='';render(true);}else if(t.id==='holidayYear'){holidayYear=+t.value||new Date().getFullYear();holidayData=[];holidaySelected={};holidayMsg='';render(true);}else if(t.id==='holidayAct')holidayAct=t.value;else if(t.hasAttribute&&t.hasAttribute('data-holiday-i'))holidaySelected[t.getAttribute('data-holiday-i')]=t.checked;});
 /* ficha de lectura de un día importante */
 function openDayView(id){
   if(!dayById(id))return;
@@ -2131,7 +2331,7 @@ function openDayView(id){
 }
 function renderDayView(){
   var x=dayById(fo.id);if(!x){return '<div class="sheetbox"><p class="muted">Este día ya no existe.</p><button class="btn" data-a="close">Cerrar</button></div>';}
-  var it={dtype:x.dtype,date:x.date,rec:x.rec==='yearly',rule:x.leap||'feb28'},t=dtype(x.dtype),nx=dyNext(it,todayKey());
+  var it={dtype:x.dtype,date:x.date,rec:x.rec==='yearly',rule:x.leap||'feb28',end:dayEnd(x)},t=dtype(x.dtype),nx=dyNext(it,todayKey());
   var rows=[];
   rows.push(['Fecha',F_LONG.format(pdate(x.date))]);
   rows.push(['Recurrencia',it.rec?'Cada año'+(dyLeapTxt(it)?' · en años no bisiestos: '+dyLeapTxt(it):''):'Solo una vez']);
@@ -2141,6 +2341,8 @@ function renderDayView(){
   else rows.push(['Cuándo',whenTxt(x.date)]);
   if(x.el){var o=elapsed(x.date,todayKey());rows.push([o.future?'Falta':'Tiempo transcurrido',elapsedTxt(x.date).replace(/^(Faltan|Hace) /,'')+' ('+o.total+(o.total===1?' día':' días')+' en total)']);}
   if(x.cat)rows.push(['Categoría',x.cat]);
+  if(x.dayoff)rows.push(['Día libre',dayLen(x)>1?freeRangeTxt(x):'Sí']);
+  if(x.dayAct&&actById(x.dayAct))rows.push(['Actividad automática',actById(x.dayAct).name]);
   var h='<div class="sheetbox"><div class="row between"><h2 style="overflow-wrap:anywhere">'+esc(x.name)+'</h2><button class="iconbtn" data-a="close" aria-label="Cerrar">'+ic('x')+'</button></div><div class="chips" style="margin:0"><span class="chip">'+ic(t[2],14)+t[1]+'</span></div>';
   h+='<div class="stack" style="gap:10px">'+rows.map(function(r){return '<div class="stack" style="gap:2px"><span class="small muted">'+r[0]+'</span><span>'+esc(r[1])+'</span></div>';}).join('')+'</div>';
   if(x.desc)h+='<div class="stack" style="gap:2px"><span class="small muted">Descripción</span><span style="white-space:pre-wrap">'+esc(x.desc)+'</span></div>';
@@ -2153,19 +2355,22 @@ function renderDayView(){
 function dyDefaults(f){if(!f.recTouched)f.rec=(f.dtype==='birthday'||f.dtype==='anniv')?'yearly':'none';if(!f.elTouched)f.el=f.dtype==='milestone';}
 function openDay(id,pp0,date){
   var x=id?dayById(id):null;
-  fo={type:'day',id:id||null,dtype:x?x.dtype:'custom',name:x?x.name:'',date:x?x.date:(date||todayKey()),rec:x?x.rec:'none',leap:x?(x.leap||'feb28'):'feb28',cat:x?(x.cat||''):'',desc:x?(x.desc||''):'',note:x?(x.note||''):'',el:x?!!x.el:false,pp:x?(x.pp||[]).slice():(pp0||[]),recTouched:!!x,elTouched:!!x,del:false,dupKey:''};
+  fo={type:'day',id:id||null,dtype:x?x.dtype:'custom',name:x?x.name:'',date:x?x.date:(date||todayKey()),rec:x?x.rec:'none',leap:x?(x.leap||'feb28'):'feb28',cat:x?(x.cat||''):'',desc:x?(x.desc||''):'',note:x?(x.note||''):'',el:x?!!x.el:false,dayoff:x?!!x.dayoff:false,end:x?(x.end||''):'',dayAct:x?(x.dayAct||''):'',holidaySource:x?(x.holidaySource||''):'',pp:x?(x.pp||[]).slice():(pp0||[]),recTouched:!!x,elTouched:!!x,del:false,dupKey:''};
   renderForm();$sheet.classList.add('open');
   try{lastFocus=document.activeElement;}catch(e){}
 }
 function dyLeapNeed(){return fo.rec==='yearly'&&(fo.date||'').slice(5)==='02-29';}
 function renderDay(){
-  var h='<div class="sheetbox"><div class="row between"><h2>'+(fo.id?'Editar fecha':'Nueva fecha')+'</h2><button class="iconbtn" data-a="close" aria-label="Cerrar">'+ic('x')+'</button></div>';
+  var h='<div class="sheetbox"><div class="row between"><h2>'+(fo.dayoff?(fo.id?'Editar día libre':'Nuevo día libre'):(fo.id?'Editar fecha':'Nueva fecha'))+'</h2><button class="iconbtn" data-a="close" aria-label="Cerrar">'+ic('x')+'</button></div>';
   h+='<div class="stack" style="gap:6px"><h3>Tipo</h3><div class="seg" style="grid-template-columns:repeat(2,1fr)" role="group" aria-label="Tipo">'+DTYPES.filter(function(t){return t[0]!=='event';}).map(function(t){return '<button data-a="dType" data-v="'+t[0]+'" class="'+(fo.dtype===t[0]?'on':'')+'" aria-pressed="'+(fo.dtype===t[0])+'">'+t[1]+'</button>';}).join('')+'</div></div>';
   h+=fld('dName','Nombre',fo.name,'maxlength="80"');
-  h+='<div class="stack" style="gap:6px"><h3>Fecha</h3><input id="dDate" class="field" type="date" value="'+esc(fo.date)+'"></div>';
+  h+='<div class="stack" style="gap:6px"><h3>'+(fo.dayoff&&fo.rec!=='yearly'?'Desde':'Fecha')+'</h3><input id="dDate" class="field" type="date" value="'+esc(fo.date)+'"></div>';
   h+='<div class="stack" style="gap:6px"><h3>Recurrencia</h3><div class="seg" style="grid-template-columns:repeat(2,1fr)" role="group" aria-label="Recurrencia">'+[['none','Solo una vez'],['yearly','Cada año']].map(function(r){return '<button data-a="dRec" data-v="'+r[0]+'" class="'+(fo.rec===r[0]?'on':'')+'" aria-pressed="'+(fo.rec===r[0])+'">'+r[1]+'</button>';}).join('')+'</div><span class="small muted">'+(fo.rec==='yearly'?'Se calcula cada año a partir de esta fecha; no se crean copias.':'La fecha solo ocurre ese día.')+'</span></div>';
   if(dyLeapNeed())h+='<div class="stack" style="gap:6px"><h3>Si el año no es bisiesto</h3><select id="dLeap" class="field">'+LEAPS.map(function(l){return '<option value="'+l[0]+'"'+(fo.leap===l[0]?' selected':'')+'>'+l[1]+'</option>';}).join('')+'</select></div>';
   h+='<label class="row between" for="dEl"><span>Mostrar el tiempo transcurrido</span><input id="dEl" type="checkbox" '+(fo.el?'checked':'')+' style="width:22px;height:22px;accent-color:var(--accent)"></label>';
+  h+='<label class="row between" for="dDayoff"><span>Día libre (sin clases)</span><input id="dDayoff" type="checkbox" '+(fo.dayoff?'checked':'')+' style="width:22px;height:22px;accent-color:var(--accent)"></label>';
+  if(fo.dayoff&&fo.rec!=='yearly')h+='<div class="stack" style="gap:6px"><h3>Hasta (días seguidos)</h3><input id="dEnd" class="field" type="date" value="'+esc(fo.end||'')+'" min="'+esc(fo.date)+'" aria-label="Último día libre"><span class="small muted">Déjalo vacío si es un solo día. Para vacaciones o puentes elige el último día libre: se aplican todos los días intermedios.</span></div>';
+  h+='<div class="stack" style="gap:6px"><h3>Actividad que se activa ese día</h3><select id="dDayAct" class="field"><option value="">Ninguna</option>'+S.acts.slice().sort(byName).map(function(a){return '<option value="'+esc(a.id)+'"'+(fo.dayAct===a.id?' selected':'')+'>'+esc(a.name)+'</option>';}).join('')+'</select><span class="small muted">Al guardar una entrada en este día libre, Mareas añadirá esta actividad automáticamente.</span></div>';
   h+='<div class="stack" style="gap:6px"><h3>Categoría</h3><select id="dCat" class="field"><option value="">Sin categoría</option>'+DCATS.map(function(c){return '<option value="'+c+'"'+(fo.cat===c?' selected':'')+'>'+c+'</option>';}).join('')+'</select></div>';
   h+=fld('dDesc','Descripción',fo.desc,'maxlength="300"');
   h+=evPersBlock();
@@ -2177,14 +2382,22 @@ function readDay(){
   var g=function(id){var e=document.getElementById(id);return e?e.value:null;},v;
   if((v=g('dName'))!==null)fo.name=v;if((v=g('dDate'))!==null)fo.date=v;if((v=g('dCat'))!==null)fo.cat=v;if((v=g('dDesc'))!==null)fo.desc=v;if((v=g('dNote'))!==null)fo.note=v;if((v=g('dLeap'))!==null)fo.leap=v;
   var el=document.getElementById('dEl');if(el&&el.checked!==fo.el){fo.el=el.checked;fo.elTouched=true;}
+  var df=document.getElementById('dDayoff'),da=document.getElementById('dDayAct'),de=document.getElementById('dEnd');if(df)fo.dayoff=df.checked;if(da)fo.dayAct=da.value;if(de)fo.end=de.value;
 }
 function saveDay(){
   readDay();var err=document.getElementById('fErr'),nm=fo.name.trim().slice(0,80),bad=function(t){err.textContent=t;};
   if(!nm){bad('Escribe un nombre.');return;}
   if(!validD(fo.date)){bad('Elige una fecha válida.');return;}
+  var en=fo.dayoff&&fo.rec!=='yearly'&&fo.end?fo.end:'';
+  if(en){
+    if(!validD(en)){bad('El último día libre no es una fecha válida.');return;}
+    if(en<fo.date){bad('El último día libre debe ser igual o posterior al primero.');return;}
+    if(Math.round((pdate(en)-pdate(fo.date))/864e5)>365){bad('Un periodo libre no puede durar más de un año.');return;}
+  }
   if(S.days.some(function(d){return d.id!==fo.id&&d.dtype===fo.dtype&&d.date===fo.date&&plain(d.name)===plain(nm);})){bad('Ya existe una fecha igual (mismo tipo, nombre y día).');return;}
   var o=fo.id?dayById(fo.id):null;if(!o){o={id:nid('dy')};S.days.push(o);}
   o.dtype=fo.dtype;o.name=nm;o.date=fo.date;o.rec=fo.rec==='yearly'?'yearly':'none';o.el=!!fo.el;
+  o.dayoff=!!fo.dayoff;setOpt(o,'end',en&&en>fo.date?en:'');setOpt(o,'dayAct',o.dayoff&&actById(fo.dayAct)?fo.dayAct:'');setOpt(o,'holidaySource',fo.holidaySource||'');
   setOpt(o,'leap',dyLeapNeed()&&leapOk(fo.leap)?fo.leap:'');
   setOpt(o,'cat',DCATS.indexOf(fo.cat)>-1?fo.cat:'');setOpt(o,'desc',fo.desc.trim().slice(0,300));setOpt(o,'note',fo.note.trim().slice(0,1000));
   var pq=(fo.pp||[]).filter(function(id){return !!persById(id);});if(pq.length)o.pp=pq;else delete o.pp;
@@ -2201,27 +2414,34 @@ function dayClean(x){
   if(DCATS.indexOf(x.cat)>-1)o.cat=x.cat;
   if(x.desc)o.desc=String(x.desc).slice(0,300);
   if(x.note)o.note=String(x.note).slice(0,1000);
+  if(x.dayoff)o.dayoff=true;
+  if(x.dayoff&&x.rec!=='yearly'&&x.end&&validD(String(x.end))&&String(x.end)>x.date)o.end=String(x.end);
+  if(x.dayAct&&S.acts.some(function(a){return a.id===String(x.dayAct);}))o.dayAct=String(x.dayAct);
+  if(x.holidaySource)o.holidaySource=String(x.holidaySource).slice(0,12);
   if(Array.isArray(x.pp)&&x.pp.length)o.pp=x.pp.map(String).slice(0,30);
   return o;
 }
 /* si cambia el día o la tarde cruza medianoche, se recalculan "hoy" y los tiempos transcurridos */
 var dyToday=todayKey();
-function dyTick(){var k=todayKey();if(k!==dyToday){dyToday=k;if(!fo&&!ed&&!$sheet.classList.contains('open'))render(true);}}
+function dyTick(){if(document.hidden)return;var k=todayKey();if(k!==dyToday){dyToday=k;if(!fo&&!ed&&!$sheet.classList.contains('open'))render(true);}}
 document.addEventListener('visibilitychange',function(){if(!document.hidden)dyTick();});
 setInterval(dyTick,30000);
 document.addEventListener('change',function(ev){
   var t=ev.target;if(!t)return;
   if(t.id==='dyt'){ui.dyT=t.value;render(true);}
   else if(fo&&fo.type==='day'&&t.id==='dDate'){var b=dyLeapNeed();readDay();if(b!==dyLeapNeed())renderForm();}
+  else if(fo&&fo.type==='day'&&t.id==='dDayoff'){readDay();renderForm();}
   else if(fo&&fo.type==='per'&&(t.id==='fBd'||t.getAttribute('data-f')==='d')){var b0=perLeapSig();readPer();if(b0!==perLeapSig())renderForm();}
 });
 /* ajustes: acciones avanzadas */
 function advSettings(){
-  var h='<section class="card stack"><h3>Acciones avanzadas</h3><p class="muted small" style="margin:0">Amplían las acciones principales del diario. Las personas se pueden elegir en cualquier entrada; <b>Conexiones</b> se conserva por compatibilidad.</p>';
+  var h='<section class="card stack"><h3>Acciones avanzadas</h3><p class="muted small" style="margin:0">Amplían las acciones principales del diario. «Con quién» aparece al seleccionar una actividad vinculada a Conexiones.</p>';
   var on=connActs(),off=S.acts.filter(function(a){return !a.conn;});
   h+='<div class="stack" style="gap:8px"><b>Conexiones</b>'+(on.length?on.map(function(a){return '<div class="arow-s" style="grid-template-columns:22px minmax(0,1fr) auto">'+ic(a.icon,22)+'<span style="overflow-wrap:anywhere">'+esc(a.name)+'</span><button class="btn sm ghost" data-a="connOff" data-v="'+esc(a.id)+'">Quitar</button></div>';}).join(''):'<span class="small muted">Aún no está vinculada a ninguna acción. Elige una (por ejemplo Amigos) y pulsa Vincular.</span>');
   if(off.length)h+='<div class="row"><select id="connSel" class="field" style="flex:1;min-width:0" aria-label="Acción a conectar">'+off.map(function(a){return '<option value="'+esc(a.id)+'">'+esc(a.name)+'</option>';}).join('')+'</select><button class="btn sm" data-a="connOn">Vincular</button></div>';
   h+='<div><button class="btn sm ghost" data-a="tab" data-v="people">Ver personas ('+S.people.length+')</button></div></div>';
+  var foOn=footballActs(),foOff=S.acts.filter(function(a){return !a.football;});
+  h+='<div class="stack" style="gap:8px"><b>Fútbol</b><p class="muted small" style="margin:0">Vincula esta acción para añadir equipos, competición y resultado al registrar un partido.</p>'+(foOn.length?foOn.map(function(a){return '<div class="arow-s" style="grid-template-columns:22px minmax(0,1fr) auto">'+ic(a.icon,22)+'<span style="overflow-wrap:anywhere">'+esc(a.name)+'</span><button class="btn sm ghost" data-a="footballOff" data-v="'+esc(a.id)+'">Quitar</button></div>';}).join(''):'')+(foOff.length?'<div class="row"><select id="footballSel" class="field" style="flex:1;min-width:0" aria-label="Actividad de fútbol">'+foOff.map(function(a){return '<option value="'+esc(a.id)+'">'+esc(a.name)+'</option>';}).join('')+'</select><button class="btn sm" data-a="footballOn">Vincular</button></div>':'<span class="small muted">Todas las actividades ya están vinculadas.</span>')+'</div>';
   h+=sleepSettings()+stressSettings();
   h+='<div class="stack" style="gap:8px"><b>Sub-acciones</b><p class="muted small" style="margin:0">Derivadas de una acción principal (por ejemplo Ejercicio → Correr, Gimnasio). Aparecen al seleccionar esa acción.</p>';
   S.subs.slice().sort(function(a,b){return (a.parent<b.parent?-1:a.parent>b.parent?1:0)||byName(a,b);}).forEach(function(s){
@@ -2297,9 +2517,10 @@ function moodAnalysis(r){
 function vMood(){
   var days=ui.moodRange||30,r=moodState(days),h=header();
   h+='<div class="seg" style="grid-template-columns:repeat(3,1fr)" role="group" aria-label="Periodo">'+[[7,'7 días'],[30,'30 días'],[90,'3 meses']].map(function(t){return '<button data-a="moodRange" data-v="'+t[0]+'" class="'+(days===t[0]?'on':'')+'" aria-pressed="'+(days===t[0])+'">'+t[1]+'</button>';}).join('')+'</div>';
-  if(r.low)return h+'<section class="card stack"><h3>Estado anímico</h3><p style="margin:0">Necesito al menos 5 registros en este periodo para analizarlo (ahora hay '+r.n+'). Sigue apuntando cómo te sientes o prueba con un periodo más largo.</p></section>';
+  if(r.low)return h+footballMoodCard(days,null)+'<section class="card stack"><h3>Estado anímico</h3><p style="margin:0">Necesito al menos 5 registros en este periodo para analizarlo (ahora hay '+r.n+'). Sigue apuntando cómo te sientes o prueba con un periodo más largo.</p></section>';
   var an=moodAnalysis(r),l=moodLabel(r.avg),score=Math.round((r.avg-1)/4*100);
   h+='<section class="card stack"><div class="row between"><h3>Diagnóstico</h3><span class="slevel" style="background:'+l[1]+'">'+l[0]+'</span></div><div class="row" style="align-items:baseline;gap:8px"><b style="font-size:40px;line-height:1">'+num(r.avg)+'</b><span class="muted">/ 5 · índice '+score+'/100</span></div><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+score+'"><i style="width:'+score+'%;background:'+l[1]+'"></i></div><p style="margin:0">'+esc(an.summary)+'</p></section>';
+  h+=footballMoodCard(days,r.avg);
   h+='<section class="card stack"><h3>Resumen del periodo</h3><div class="tiles"><div class="tile"><b>'+r.n+'</b><span class="small muted">registros</span></div><div class="tile"><b>'+Math.round(r.cov*100)+'%</b><span class="small muted">días con registro</span></div><div class="tile"><b>'+(r.trend===null?'–':(r.trend>=0?'+':'−')+num(Math.abs(r.trend)))+'</b><span class="small muted">vs. periodo anterior</span></div></div>'+chartSvg(buckets(days),r.cur)+'</section>';
   if(an.flags.length)h+='<section class="card stack"><h3>Lo que detecto</h3>'+an.flags.map(function(f){return '<div class="alertc" style="border-left-color:'+['var(--m3)','var(--m4)','var(--danger)'][f.s]+'">'+ic(f.s===0?'check':'flag',20)+'<span>'+esc(f.t)+'</span></div>';}).join('')+'</section>';
   h+='<section class="card stack"><h3>Pautas para mejorar</h3>'+an.tips.map(function(t){return '<div class="alertc" style="border-left-color:var(--accent)">'+ic('sparkle',20)+'<span>'+esc(t)+'</span></div>';}).join('')+'</section>';
@@ -2312,6 +2533,11 @@ function vMood(){
   h+='<section class="card stack"><p class="muted small" style="margin:0">Este análisis es una estimación orientativa basada solo en lo que has registrado: no es un diagnóstico clínico ni sustituye a un profesional. Si te preocupa cómo te sientes, habla con alguien de confianza o con un especialista.</p></section>';
   h+=sleepCard(r.days)+stressActsCard(false);
   return h;
+}
+function footballMoodCard(days,overall){
+  var from=Date.now()-(days||30)*864e5,list=S.entries.filter(function(e){return e.ts>=from&&e.match&&matchText(e);}).sort(function(a,b){return b.ts-a.ts;}),avg=list.length?mean(list.map(function(e){return e.mood;})):null,acts=footballActs();
+  var detail=list.slice(0,5).map(function(e){return '<div class="mood-match"><span class="mood-match-face">'+face(e.mood,28)+'</span><span class="mid"><b>'+esc(matchText(e))+'</b><span class="small muted">'+esc(dayLabel(dkey(e.ts)))+' · ánimo '+fmtG(e.mood)+'/5</span></span></div>';}).join('');
+  return '<section class="card stack football-mood"><div class="row between"><h3 style="margin:0">Fútbol y estado anímico</h3><span class="football-ball">'+ic('sport',22)+'</span></div>'+(list.length?'<div class="row between"><span class="small muted">Media en días con partido ('+list.length+')</span><b class="football-mood-average">'+fmtG(avg)+'/5</b></div>'+(overall!==null?'<p class="small muted" style="margin:0">Media del periodo: '+fmtG(overall)+'/5 · diferencia en días con partido: '+(avg>=overall?'+':'−')+fmtG(Math.abs(avg-overall))+' puntos. Es una comparación de tus registros, no indica causa.</p>':'<p class="small muted" style="margin:0">Comparación de tus registros con partido; todavía no hay suficientes datos para el resumen general.</p>')+detail+(list.length>5?'<span class="small muted">y '+(list.length-5)+' partidos más en tus entradas.</span>':''):'<p class="small muted" style="margin:0">Registra tu ánimo y los datos del partido para ver aquí cómo coinciden en el tiempo.</p>')+(acts.length?'<button class="btn sm" data-a="footballMoodStart">'+ic('plus',16)+' Registrar ánimo viendo fútbol</button>':'<button class="btn sm ghost" data-a="tab" data-v="set">Vincular una actividad de fútbol</button>')+'</section>';
 }
 function homeMood(){
   var r=moodState(14);if(r.low)return '';
@@ -2399,8 +2625,20 @@ document.addEventListener('click',function(ev){
     case 'newGr':openGrade(null,v);break;
     case 'editGr':openGrade(v,'');break;
     case 'grType':if(!gf)break;readGrade();gf.type=v;renderGrade();break;
+    case 'gradeCriterion':if(!gf)break;readGrade();var ci=gf.criteria.indexOf(v);if(ci>-1)gf.criteria.splice(ci,1);else gf.criteria.push(v);renderGrade();break;
+    case 'perAdd':addGradePeriod();break;
+    case 'perEdit':ui.periodEdit={id:v};ui.periodDel=null;render(true);{var pf=document.getElementById('periodForm');if(pf)pf.scrollIntoView({block:'center',behavior:'smooth'});}break;
+    case 'perSave':saveGradePeriod(v);break;
+    case 'perCancel':ui.periodEdit=null;render(true);break;
+    case 'perDel':ui.periodDel=v;render(true);break;
+    case 'perDelCancel':ui.periodDel=null;render(true);break;
+    case 'perDelOk':deleteGradePeriod(v);break;
+    case 'gotoPeriods':closeEditor();goTab('periods');break;
+    case 'termSelect':{var sid=el.getAttribute('data-s');ui.gradePeriodSel=ui.gradePeriodSel||{};ui.gradePeriodSel[sid]=ui.gradePeriodSel[sid]===v?'':v;render(true);break;}
+    case 'criterionAdd':{var csj=subjById(v),ciEl=document.getElementById('criterionName_'+v),cn=ciEl&&ciEl.value.trim();if(!csj||!cn)break;csj.criteria=Array.isArray(csj.criteria)?csj.criteria:[];if(!csj.criteria.some(function(c){return plain(c.name)===plain(cn);}))csj.criteria.push({id:nid('cr'),name:cn.slice(0,40)});save();render(true);break;}
     case 'grSave':if(gf)saveGrade();break;
     case 'grDel':if(gf)delGrade();break;
+    case 'footballMoodStart':{var fm=footballActs()[0];if(fm)openEditor({acts:[fm.id]});else goTab('set');break;}
     case 'subDiff':{var g4s=subjById(el.getAttribute('data-s'));if(g4s){if(v==='auto')delete g4s.diff;else g4s.diff=v;save();render(true);}break;}
     case 'sleepOn':{var g3s=document.getElementById('sleepSel'),g3a=g3s?actById(g3s.value):null;if(g3a){g3a.sleep=true;save();render(true);}break;}
     case 'sleepOff':{var g3o=actById(v);if(g3o){delete g3o.sleep;save();render(true);}break;}
@@ -2418,14 +2656,15 @@ document.addEventListener('click',function(ev){
       refreshAdv();break;}
     case 'newPer':openPer(null);break;
     case 'newDay':openDay(null,null,v||null);break;
+    case 'newFree':openDay(null,null,v||null);fo.dayoff=true;fo.dtype='custom';renderForm();break;
     case 'newDayP':openDay(null,[v]);break;
     case 'dayView':openDayView(v);break;
     case 'dayEdit':openDay(v);break;
-    case 'dayPerson':closeEditor();ui.perSel=v;ui.tab='person';ui.perN=5;ui.relDel=null;render();break;
+    case 'dayPerson':closeEditor();ui.perSel=v;ui.perN=5;ui.relDel=null;goTab('person');break;
     case 'dType':if(!fo)break;readForm();fo.dtype=v;dyDefaults(fo);renderForm();break;
     case 'dRec':if(!fo)break;readForm();fo.rec=v;fo.recTouched=true;renderForm();break;
     case 'editPer':openPer(v);break;
-    case 'person':ui.perSel=v;ui.tab='person';ui.perN=5;ui.relDel=null;render();break;
+    case 'person':ui.perSel=v;ui.perN=5;ui.relDel=null;goTab('person');break;
     case 'fCat':if(!fo)break;readForm();fo.cat=fo.cat===v?'':v;renderForm();break;
     case 'fGrp':{if(!fo)break;readForm();var gi=fo.g.indexOf(v);if(gi>-1)fo.g.splice(gi,1);else fo.g.push(v);renderForm();break;}
     case 'fGAdd':{if(!fo)break;readForm();var gin=document.getElementById('fGNew'),gn=gin?gin.value.trim().slice(0,30):'';if(!gn)break;var gx=S.pgroups.filter(function(g){return plain(g.name)===plain(gn);})[0];if(!gx){gx={id:nid('gr'),name:gn};S.pgroups.push(gx);save();}if(fo.g.indexOf(gx.id)<0)fo.g.push(gx.id);renderForm();break;}
@@ -2446,6 +2685,8 @@ document.addEventListener('click',function(ev){
     case 'fPers':{if(!fo)break;fo.pp=fo.pp||[];var pi2=fo.pp.indexOf(v);if(pi2>-1)fo.pp.splice(pi2,1);else fo.pp.push(v);el.classList.toggle('on',pi2<0);el.setAttribute('aria-pressed',String(pi2<0));break;}
     case 'connOn':{var sl=document.getElementById('connSel'),ac=sl?actById(sl.value):null;if(ac){ac.conn=true;save();render(true);}break;}
     case 'connOff':{var ao=actById(v);if(ao){delete ao.conn;save();render(true);}break;}
+    case 'footballOn':{var fs=document.getElementById('footballSel'),fa=fs?actById(fs.value):null;if(fa){fa.football=true;save();render(true);}break;}
+    case 'footballOff':{var foff=actById(v);if(foff){delete foff.football;save();render(true);}break;}
     case 'addSub':{
       var pa=document.getElementById('subPar'),sn=document.getElementById('subName'),sm=document.getElementById('subMsg'),par=pa?actById(pa.value):null,nm2=sn?sn.value.trim():'';
       if(!par){sm.textContent='Elige una acción principal.';break;}
@@ -2512,6 +2753,7 @@ async function cloudLogin(mode){
   cloudSay(mode==='new'?'Creando cuenta…':'Entrando…');
   try{
     var j=await sbAuth(mode==='new'?'signup':'token?grant_type=password',{email:em,password:pw});
+    if(mode==='new'&&purgeExamples())save();
     if(!j.access_token){cloudSay('Cuenta creada. Revisa tu correo, confirma la cuenta y vuelve a pulsar Entrar.');return;}
     cloudStart(sbSet(j));
   }catch(e){cloudSay(cloudErr(e));}
@@ -2655,11 +2897,198 @@ function cloudCard(){
   h+='<div class="row" style="flex-wrap:wrap"><button class="btn sm" data-a="cloudSync">Sincronizar ahora</button><button class="btn sm ghost" data-a="cloudAuto">'+(m.auto?'Desactivar automática':'Activar automática')+'</button><button class="btn sm ghost" data-a="cloudOut">Cerrar sesión</button></div><p class="muted small" style="margin:0">Se sincroniza todo menos el estilo visual y las notificaciones de cada dispositivo. Los vídeos de más de 45 MB no se suben. Si borras algo en un dispositivo, el borrado no se copia a los demás.</p><div><button class="btn sm danger" data-a="cloudWipe">'+(q==='wipe'?'Confirmar: borrar mi copia de la nube':'Borrar mi copia de la nube')+'</button></div><div class="msg" id="cloudMsg" role="status">'+esc(ui.cloudMsg||'')+'</div></section>';
   return h;
 }
+/* ---------- cuenta de Mareas ---------- */
+var ACCT=[
+  ['profile','users','Perfil personal','Nombre, avatar y descripción'],
+  ['journey','stats','Mi recorrido','Actividad y estadísticas personales'],
+  ['custom','palette','Personalización','Tema y preferencias'],
+  ['data','database','Mis datos','Copias de seguridad y almacenamiento'],
+  ['privacy','shield','Privacidad','Almacenamiento y control de datos'],
+  ['dev','code','Desarrollador','Conexión MCP y claves de acceso']
+];
+function acctAvatar(sz){
+  var p=S.profile;
+  if(p.av)return perBadge({av:p.av,name:p.name},sz);
+  return '<span class="sbadge" style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:var(--surface2);color:var(--fg)">'+ic('users',Math.round(sz*.48))+'</span>';
+}
+function acctDate(t){return new Date(t).toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'});}
+function acctStats(){
+  var es=S.entries,days={},i;
+  es.forEach(function(e){days[Math.round(sod(e.ts).getTime()/864e5)]=1;});
+  var keys=Object.keys(days).map(Number).sort(function(a,b){return a-b;});
+  var best=0,run=0;
+  keys.forEach(function(k,j){run=j&&k===keys[j-1]+1?run+1:1;if(run>best)best=run;});
+  var today=Math.round(sod(Date.now()).getTime()/864e5),cur=0,d=days[today]?today:today-1;
+  while(days[d]){cur++;d--;}
+  var last30=0;for(i=0;i<30;i++)if(days[today-i])last30++;
+  var using=Math.max(1,Math.floor((sod(Date.now()).getTime()-sod(S.profile.since).getTime())/864e5)+1);
+  return {entries:es.length,days:keys.length,using:using,best:best,cur:cur,cons:Math.round(last30/30*100),avg:mean(es.map(function(e){return e.mood;}))};
+}
+function acctTile(icon,val,label){return '<div class="card acct-tile">'+ic(icon,22)+'<b>'+val+'</b><span class="small muted">'+label+'</span></div>';}
+function studySummary(){
+  var total=0,by={};S.sessions.forEach(function(x){var n=Math.max(0,+x.min||0);total+=n;var k=x.sid&&subjById(x.sid)?x.sid:'none';by[k]=(by[k]||0)+n;});
+  var list=Object.keys(by).sort(function(a,b){return by[b]-by[a];});
+  return {total:total,list:list.map(function(id){return {name:id==='none'?'Sin asignatura':subjById(id).name,min:by[id]};})};
+}
+function studyCard(){
+  var s=studySummary(),hours=Math.floor(s.total/60),mins=s.total%60;
+  return '<section class="card stack"><div class="row between"><h3 style="margin:0">Horas de estudio · Pomodoro</h3><b>'+hours+' h '+mins+' min</b></div>'+(s.list.length?s.list.map(function(x){return '<div class="row between small"><span>'+esc(x.name)+'</span><b>'+Math.floor(x.min/60)+' h '+(x.min%60)+' min</b></div>';}).join(''):'<p class="small muted" style="margin:0">Las sesiones completadas aparecerán aquí, separadas por asignatura.</p>')+'</section>';
+}
+function lectiveSummary(){
+  var start=S.sched.schoolStart,total=0,days=0;
+  if(start&&validD(start)&&S.classes.length){
+    var from=new Date(start+'T12:00:00'),to=new Date();to.setHours(12,0,0,0);
+    if(from<=to)for(var d=new Date(from);d<=to;d.setDate(d.getDate()+1)){
+      var key=dkey(d),wd=wdayOf(d),week=weekFor(d);if(wd>=S.sched.days)continue;
+      if(isFree(key))continue;
+      var mins=0;S.classes.forEach(function(c){if(c.day===wd&&(!S.sched.ab||!c.week||c.week===week)&&subjById(c.sid))mins+=Math.max(0,tmin(c.end)-tmin(c.start));});
+      if(mins){total+=mins;days++;}
+    }
+  }
+  return {hours:Math.floor(total/60),mins:total%60,days:days,start:start||''};
+}
+function lectiveCard(){
+  var l=lectiveSummary();return '<section class="card stack"><div class="row between"><h3 style="margin:0">Horas lectivas impartidas</h3><b>'+l.hours+' h '+l.mins+' min</b></div><p class="small muted" style="margin:0">Calculadas con las clases de tu horario hasta hoy'+(l.days?' · '+l.days+' días lectivos':'')+'. Se descuentan tus días libres guardados.</p><label class="stack" style="gap:6px"><span class="small">Primer día de clases</span><input id="schoolStart" class="field" type="date" value="'+esc(l.start)+'"></label>'+(S.classes.length?'':'<span class="small muted">Añade primero tus clases en Asignaturas → Horario para calcular el total.</span>')+'</section>';
+}
+function vAcct(){
+  var sec=ui.acctSec||'',p=S.profile,st=acctStats(),row=ACCT.filter(function(r){return r[0]===sec;})[0];
+  if(sec&&row){
+    var h='<div class="bar2"><button class="iconbtn" data-a="acctSec" data-v="" aria-label="Volver a Cuenta de Mareas">'+ic('left',22)+'</button><h2>'+esc(row[2])+'</h2></div>';
+    return h+acctSection(sec,st);
+  }
+  var h2='<div class="bar2"><button class="iconbtn" data-a="back" data-v="more" aria-label="Volver">'+ic('left',22)+'</button><h2>Cuenta de Mareas</h2></div>';
+  h2+='<button class="card acct-head" data-a="acctSec" data-v="profile" aria-label="Editar perfil">'+acctAvatar(84)+'<span class="mid"><b class="acct-name">'+esc(p.name||'Mi Cuenta de Mareas')+'</b><span class="muted">'+esc(p.bio||'Tu espacio personal')+'</span><span class="acct-edit">Editar perfil</span></span>'+ic('right',20)+'</button>';
+  h2+='<p class="small muted" style="margin:0">Usas Mareas desde el '+esc(acctDate(p.since))+'.</p>';
+  h2+='<div class="acct-tiles">'+acctTile('cal',st.days,'Días registrados')+acctTile('book',st.entries,'Entradas')+acctTile('clock',st.using,st.using===1?'Día usando Mareas':'Días usando Mareas')+acctTile('flame',st.cons+'%','Consistencia (30 días)')+'</div>';
+  h2+=studyCard();
+  h2+=lectiveCard();
+  h2+=ACCT.map(function(r){return menuRow('acct','x','','').replace('data-a="tab" data-v="acct"','data-a="acctSec" data-v="'+r[0]+'"').replace(ic('x',22),ic(r[1],22)).replace('<b></b>','<b>'+r[2]+'</b>').replace('<span class="small muted"></span>','<span class="small muted">'+r[3]+'</span>');}).join('');
+  return h2;
+}
+function acctSection(sec,st){
+  var p=S.profile,h='';
+  if(sec==='profile'){
+    h+='<section class="card stack"><div class="row" style="gap:14px">'+acctAvatar(72)+'<div class="stack" style="gap:8px"><div class="row" style="flex-wrap:wrap;gap:8px"><label class="btn sm" for="acctAv" style="cursor:pointer">'+ic('image',16)+' Cambiar foto</label><input id="acctAv" type="file" accept="image/*" hidden>'+(p.av?'<button class="btn sm ghost" data-a="acctAvDel">Quitar</button>':'')+'</div><span class="small muted">Se guarda reducida en tu dispositivo.</span></div></div>';
+    h+='<label class="stack" style="gap:6px"><span class="small"><b>Nombre</b></span><input id="acctName" class="field" maxlength="40" value="'+esc(p.name)+'" placeholder="Mi Cuenta de Mareas" autocomplete="off"></label>';
+    h+='<label class="stack" style="gap:6px"><span class="small"><b>Descripción</b> <span class="muted">(máx. 200 caracteres)</span></span><textarea id="acctBio" class="field" maxlength="200" rows="3" placeholder="Tu espacio personal">'+esc(p.bio)+'</textarea></label>';
+    h+='<div class="msg small" id="acctMsg" role="status"></div><div class="row"><button class="btn" style="flex:1" data-a="acctSave">Guardar</button></div></section>';
+    h+='<section class="card stack"><h3>Uso de Mareas</h3><div class="row between small"><span>Desde</span><b>'+esc(acctDate(p.since))+'</b></div><div class="row between small"><span>Días usando la app</span><b>'+st.using+'</b></div></section>';
+  }else if(sec==='journey'){
+    h+='<div class="acct-tiles">'+acctTile('book',st.entries,'Entradas')+acctTile('cal',st.days,'Días registrados')+acctTile('flame',st.best,'Mejor racha (días)')+acctTile('heartbeat',st.cur,'Racha actual (días)')+'</div>';
+    h+='<section class="card stack"><h3>Marea de los últimos 30 días</h3><div class="row between small"><span>Días con registro</span><b>'+st.cons+'%</b></div><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+st.cons+'"><i style="width:'+st.cons+'%;background:var(--accent)"></i></div></section>';
+    if(st.entries){
+      var r=Math.max(1,Math.min(5,Math.round(st.avg)));
+      h+='<section class="card stack"><h3>Ánimo medio</h3><div class="row" style="gap:12px">'+face(r,44)+'<div><b style="font-size:22px">'+num(st.avg)+'</b> <span class="muted small">de 5 · '+esc(MOODS[r].n)+'</span></div></div></section>';
+      var now=new Date(),ms=[],i;
+      for(i=5;i>=0;i--){var d0=new Date(now.getFullYear(),now.getMonth()-i,1),d1=new Date(now.getFullYear(),now.getMonth()-i+1,1);ms.push({n:d0.toLocaleDateString('es-ES',{month:'short'}),c:S.entries.filter(function(e){return e.ts>=d0.getTime()&&e.ts<d1.getTime();}).length});}
+      var mx=Math.max.apply(null,ms.map(function(m){return m.c;}))||1;
+      h+='<section class="card stack"><h3>Entradas por mes</h3>'+ms.map(function(m){return '<div class="row" style="gap:10px"><span class="small muted" style="width:34px">'+esc(m.n)+'</span><div class="bar" style="flex:1"><i style="width:'+Math.round(m.c/mx*100)+'%;background:var(--accent)"></i></div><b class="small" style="width:28px;text-align:right">'+m.c+'</b></div>';}).join('')+'</section>';
+      var cnt={};S.entries.forEach(function(e){(e.acts||[]).forEach(function(a){cnt[a]=(cnt[a]||0)+1;});});
+      var top=Object.keys(cnt).filter(function(a){return actById(a);}).sort(function(a,b){return cnt[b]-cnt[a];}).slice(0,5);
+      if(top.length)h+='<section class="card stack"><h3>Tus actividades más frecuentes</h3>'+top.map(function(a){var o=actById(a);return '<div class="row" style="gap:10px">'+ic(o.icon,20)+'<span style="flex:1;min-width:0;overflow-wrap:anywhere">'+esc(o.name)+'</span><b class="small">'+cnt[a]+'</b></div>';}).join('')+'</section>';
+    }else h+='<section class="card"><p class="muted" style="margin:0">Cuando registres tus primeras entradas verás aquí tu recorrido.</p></section>';
+    h+='<div><button class="btn sm ghost" data-a="tab" data-v="stats">Ver estadísticas completas</button></div>';
+  }else if(sec==='custom'){
+    h+=appearanceCard()+tourCard()+'<div><button class="btn sm ghost" data-a="tab" data-v="set">Abrir todos los ajustes</button></div>';
+  }else if(sec==='data'){
+    h+=cloudCard()+packCard()+'<div><button class="btn sm ghost" data-a="acctSetData">Importar, exportar y borrar datos</button></div>';
+  }else if(sec==='privacy'){
+    var kb=0;try{kb=Math.round(JSON.stringify(S).length/1024);}catch(e){}
+    h+='<section class="card stack"><h3>Dónde están tus datos</h3><p class="small" style="margin:0">Se guardan en este navegador: los datos en <b>localStorage</b> y las fotos y vídeos en <b>IndexedDB</b>. Ahora ocupan unos <b>'+kb+' KB</b> de datos, sin contar los archivos multimedia.</p></section>';
+    h+='<section class="card stack"><h3>Nube y privacidad</h3><p class="small" style="margin:0">'+(sbLoad()?'Tienes la sincronización activa: tus datos se guardan también en tu cuenta de Supabase. Cada cuenta solo ve sus datos, pero <b>no están cifrados de extremo a extremo</b>.':'No usas la nube: no se envía nada a ningún servidor.')+'</p></section>';
+    h+='<section class="card stack"><h3>Notificaciones</h3><p class="small" style="margin:0">Son opcionales y se piden con el permiso nativo del navegador. Puedes revisarlas en Ajustes.</p></section>';
+    h+='<div class="row" style="flex-wrap:wrap"><button class="btn sm ghost" data-a="acctSetData">Borrar o exportar mis datos</button></div>';
+  }else if(sec==='dev'){
+    h+='<section class="card stack"><h3>Para desarrolladores</h3><p class="small muted" style="margin:0">Conecta asistentes de IA compatibles con MCP a tus datos de la nube mediante claves que tú controlas.</p></section>'+mcpCard();
+  }
+  return h;
+}
+function acctSave(){
+  var n=document.getElementById('acctName'),b=document.getElementById('acctBio'),m=document.getElementById('acctMsg');
+  S.profile.name=((n&&n.value)||'').trim().slice(0,40);S.profile.bio=((b&&b.value)||'').trim().slice(0,200);
+  save();ui.acctSec='';render();
+}
+document.addEventListener('change',function(ev){
+  var t=ev.target;if(!t)return;
+  if(t.id==='schoolStart'){
+    var v=t.value;
+    if(v&&validD(v))S.sched.schoolStart=v;else delete S.sched.schoolStart;
+    save();render(true);return;
+  }
+  if(t.id!=='acctAv'||!t.files||!t.files[0])return;
+  procAvatar(t.files[0],function(u,err){
+    if(!u){var m=document.getElementById('acctMsg');if(m)m.textContent=err||'No se pudo usar la imagen.';return;}
+    S.profile.av=u;save();render(true);
+  });
+  t.value='';
+});
+/* ---------- tutorial de primer uso ---------- */
+var TOUR_KEY='mareas.tour.v1';
+var TOUR=[
+  {ic:'heart',t:'Te damos la bienvenida a Mareas',p:'Es un diario de ánimo y una agenda escolar en un solo lugar. Tus datos se quedan en este dispositivo; si quieres, puedes sincronizarlos con una cuenta gratuita.'},
+  {ic:'plus',t:'Registra cómo te sientes',p:'En Inicio pulsa el registro rápido y elige entre cinco niveles de ánimo. Después puedes añadir actividades, escalas del 1 al 5, una nota, fotos o vídeos.'},
+  {ic:'stats',t:'Calendario y estadísticas',p:'El calendario colorea cada día según tu ánimo medio. En Estadísticas ves rachas, gráficas y qué actividades suben o bajan tu media. Muestran relación, no causa.'},
+  {ic:'school',t:'Tu agenda escolar',p:'En Más → Asignaturas crea tus materias y tu horario. Después añade tareas, exámenes y entregas, controla tus faltas y usa el Pomodoro para estudiar.'},
+  {ic:'users',t:'Personas y relaciones',p:'Guarda a las personas importantes, apunta con quién estuviste en cada entrada y mira cómo se conectan entre sí en el Grafo de relaciones.'},
+  {ic:'sliders',t:'Hazla tuya',p:'Cambia el estilo visual y los widgets de Inicio, activa recordatorios y haz copias de seguridad desde Ajustes. Puedes repetir este tutorial cuando quieras desde ahí.'},
+  {ic:'check',t:'Todo listo',p:'Empieza registrando cómo te sientes hoy. Ya habrá tiempo de explorar el resto.'}
+];
+var tourI=0,tourEl=null,tourPrev=null;
+function tourDone(){try{localStorage.setItem(TOUR_KEY,'1');}catch(e){}}
+function tourSeen(){try{return localStorage.getItem(TOUR_KEY)==='1';}catch(e){return true;}}
+function tourMaybe(){
+  if(tourSeen())return;
+  /* quien ya tiene datos o una sesión en la nube no es nuevo: no se le muestra */
+  if(sbLoad()||S.entries.length||S.people.length||S.subjects.length||S.events.length){tourDone();return;}
+  tourStart();
+}
+function tourStart(){
+  if(tourEl)return;
+  tourI=0;tourPrev=document.activeElement;
+  tourEl=document.createElement('div');tourEl.id='tour';
+  tourEl.setAttribute('role','dialog');tourEl.setAttribute('aria-modal','true');tourEl.setAttribute('aria-labelledby','tourT');
+  tourEl.addEventListener('click',tourClick);
+  tourEl.addEventListener('keydown',tourKey);
+  document.body.appendChild(tourEl);
+  tourRender();
+}
+function tourRender(){
+  var s=TOUR[tourI],last=tourI===TOUR.length-1;
+  tourEl.innerHTML='<div class="tbox"><div class="row between"><span class="small muted">'+(tourI+1)+' de '+TOUR.length+'</span>'+(last?'<span></span>':'<button class="btn sm ghost" data-t="skip">Saltar</button>')+'</div><div class="tic">'+ic(s.ic,34)+'</div><h2 id="tourT">'+esc(s.t)+'</h2><p>'+esc(s.p)+'</p><div class="tdots" aria-hidden="true">'+TOUR.map(function(x,i){return '<i'+(i===tourI?' class="on"':'')+'></i>';}).join('')+'</div><div class="row"><button class="btn ghost" data-t="back"'+(tourI?'':' disabled')+'>Atrás</button><button class="btn" style="flex:1" data-t="next">'+(last?'Empezar':'Siguiente')+'</button></div></div>';
+  var nb=tourEl.querySelector('[data-t="next"]');if(nb)nb.focus();
+}
+function tourClose(){
+  if(!tourEl)return;
+  tourDone();tourEl.remove();tourEl=null;
+  try{if(tourPrev&&tourPrev.focus)tourPrev.focus();}catch(e){}
+  if(ui.tab!=='home')goTab('home');
+}
+function tourClick(e){
+  var b=e.target.closest?e.target.closest('[data-t]'):null;if(!b||b.disabled)return;
+  var a=b.getAttribute('data-t');
+  if(a==='skip')tourClose();
+  else if(a==='back'){if(tourI>0){tourI--;tourRender();}}
+  else if(a==='next'){if(tourI>=TOUR.length-1)tourClose();else{tourI++;tourRender();}}
+}
+function tourKey(e){
+  if(e.key==='Escape'){e.preventDefault();tourClose();}
+  else if(e.key==='ArrowRight'){e.preventDefault();tourClick({target:tourEl.querySelector('[data-t="next"]')});}
+  else if(e.key==='ArrowLeft'){e.preventDefault();tourClick({target:tourEl.querySelector('[data-t="back"]')});}
+  else if(e.key==='Tab'){
+    var f=tourEl.querySelectorAll('button:not([disabled])');if(!f.length)return;
+    var first=f[0],last=f[f.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+  }
+}
+function tourCard(){
+  return '<section class="card stack"><h3>Tutorial</h3><p class="muted small" style="margin:0">Repasa lo básico de Mareas en menos de un minuto.</p><div><button class="btn sm ghost" data-a="tourStart">Ver tutorial de bienvenida</button></div></section>';
+}
 /* ---------- conexión con IA (MCP): claves para el servidor supabase/functions/mareas-mcp ---------- */
 function mcpUrl(){return SBU+'/functions/v1/mareas-mcp';}
 function mcpSt(){return ui.mcp||(ui.mcp={list:null,tok:'',msg:'',rv:null,busy:false});}
 function mcpCard(){
-  if(!sbLoad())return '';
+  if(!sbLoad())return '<section class="card stack"><h3>Conexión con IA (MCP)</h3><p class="muted small" style="margin:0">Para crear claves necesitas iniciar sesión en la nube, porque el asistente consulta los datos sincronizados.</p><div><button class="btn sm ghost" data-a="acctGo" data-v="data">Ir a Mis datos</button></div></section>';
   var m=mcpSt(),h='<section class="card stack"><h3>Conexión con IA (MCP)</h3><p class="muted small" style="margin:0">Permite que un asistente compatible con MCP consulte tus datos de la nube y, si lo autorizas, añada entradas o tareas. Requiere haber desplegado el servidor (<code>supabase/mcp.sql</code> y la función <code>mareas-mcp</code>). Tus datos no están cifrados de extremo a extremo: usa una clave solo con asistentes de confianza.</p>';
   h+='<label class="stack" style="gap:6px"><span class="small"><b>Dirección del servidor</b></span><input class="field" readonly value="'+esc(mcpUrl())+'" onfocus="this.select()" aria-label="Dirección del servidor MCP"></label>';
   if(m.tok)h+='<div class="stack" style="border:1px solid var(--accent);border-radius:12px;padding:12px"><b>Tu nueva clave</b><span class="small">Cópiala ahora: no se volverá a mostrar. Úsala como «Bearer» en el asistente.</span><input class="field" readonly value="'+esc(m.tok)+'" onfocus="this.select()" aria-label="Clave MCP"><div><button class="btn sm ghost" data-a="mcpHide">Ya la he copiado</button></div></div>';
@@ -2864,25 +3293,92 @@ document.addEventListener('input',function(ev){
 
 /* ---------- módulo académico: notas, metas, ponderación (media) y dificultad ---------- */
 var GTYPES={exam:'Examen',work:'Trabajo',other:'Otra'},DIFFN={1:'Fácil',2:'Intermedia',3:'Difícil'},gf=null;
+var gradeStoreCreated=false;
 function GR(){if(!Array.isArray(S.grades))S.grades=[];return S.grades;}
 function fmtG(v){return num(v,2).replace(/,?0+$/,'');}
 function gcol(v){return v<5?'var(--danger)':v<7?'var(--m4)':'var(--m3)';}
-/* ponderación: por ahora solo la media simple; aquí se añadirán otros métodos */
+function gradePeriods(sj){
+  if(!Array.isArray(S.gradePeriods)){
+    var shared=[],maps={};
+    S.subjects.forEach(function(subject){maps[subject.id]={};(Array.isArray(subject.periods)?subject.periods:[]).forEach(function(p){
+      if(!p||!p.id||!p.name||!p.start||!p.end)return;
+      var match=p.legacy?null:shared.filter(function(x){return !x.legacy&&x.start===p.start&&x.end===p.end;})[0];
+      if(!match){match=Object.assign({},p);if(p.legacy)match.sid=subject.id;else delete match.sid;shared.push(match);}
+      maps[subject.id][p.id]=match.id;
+    });delete subject.periods;});
+    S.gradePeriods=shared;
+    GR().forEach(function(g){var m=maps[g.sid];if(m&&m[g.term])g.term=m[g.term];});
+    gradeStoreCreated=true;
+  }
+  return S.gradePeriods.filter(function(p){return !p.legacy||!sj||p.sid===sj.id;});
+}
+function gradeMode(sj){return ['mean','percentage','criteria'].indexOf(sj.gradeMode)>-1?sj.gradeMode:'mean';}
+function gradePeriod(sj,id){return gradePeriods(sj).filter(function(p){return p.id===id;})[0]||null;}
+function periodErr(t){var e=document.getElementById('periodErr');if(e)e.textContent=t;}
+function periodForm(){var g=function(id){var e=document.getElementById(id);return e?e.value:'';};return {name:g('pName').trim(),start:g('pStart'),end:g('pEnd')};}
+function addGradePeriod(){
+  var f=periodForm();
+  if(!f.name||!validD(f.start)||!validD(f.end)||f.end<f.start){periodErr('Indica el nombre y las dos fechas válidas del período.');return;}
+  if(gradePeriods().some(function(p){return !p.legacy&&!(f.end<p.start||f.start>p.end);})){periodErr('Las fechas coinciden con otro período.');return;}
+  var term={id:nid('tm'),name:f.name.slice(0,40),start:f.start,end:f.end};S.gradePeriods.push(term);
+  /* Reubica las notas históricas que ahora caen dentro del nuevo periodo. */
+  S.gradePeriods.filter(function(p){return p.legacy;}).slice().forEach(function(old){
+    GR().forEach(function(g){if(g.sid===old.sid&&g.term===old.id&&g.date>=f.start&&g.date<=f.end)g.term=term.id;});
+    var rest=GR().filter(function(g){return g.sid===old.sid&&g.term===old.id;});
+    if(!rest.length)S.gradePeriods=S.gradePeriods.filter(function(p){return p.id!==old.id;});
+    else{var ds=rest.map(function(g){return g.date;}).sort();old.start=ds[0];old.end=ds[ds.length-1];}
+  });
+  ui.periodEdit=null;ui.periodDel=null;save();render(true);
+}
+function saveGradePeriod(id){
+  var f=periodForm(),p=gradePeriods().filter(function(x){return x.id===id&&!x.legacy;})[0];
+  if(!p||!f.name||!validD(f.start)||!validD(f.end)||f.end<f.start){periodErr('Indica el nombre y las dos fechas válidas del período.');return;}
+  if(gradePeriods().some(function(x){return !x.legacy&&x.id!==id&&!(f.end<x.start||f.start>x.end);})){periodErr('Las fechas coinciden con otro período.');return;}
+  if(GR().some(function(g){return g.term===id&&(g.date<f.start||g.date>f.end);})){periodErr('El intervalo debe incluir las fechas de todas las notas asignadas a este período.');return;}
+  p.name=f.name.slice(0,40);p.start=f.start;p.end=f.end;ui.periodEdit=null;save();render(true);
+}
+function deleteGradePeriod(id){
+  if(GR().some(function(g){return g.term===id;}))return;
+  S.gradePeriods=gradePeriods().filter(function(p){return p.id!==id;});ui.periodDel=null;if(ui.periodEdit&&ui.periodEdit.id===id)ui.periodEdit=null;
+  if(ui.gradePeriodSel)Object.keys(ui.gradePeriodSel).forEach(function(k){if(ui.gradePeriodSel[k]===id)ui.gradePeriodSel[k]='';});
+  save();render(true);
+}
+function migrateLegacyGrades(){
+  var changed=gradeStoreCreated;gradeStoreCreated=false;
+  S.subjects.forEach(function(sj){var list=GR().filter(function(g){return g.sid===sj.id&&(!g.term||!gradePeriod(sj,g.term));});if(!list.length)return;
+    var terms=gradePeriods(sj),legacy=terms.filter(function(p){return p.legacy;})[0];
+    if(!legacy){var dates=list.map(function(g){return g.date;}).sort();legacy={id:nid('tm'),sid:sj.id,name:'Periodo anterior',start:dates[0],end:dates[dates.length-1],legacy:true};S.gradePeriods.push(legacy);terms.push(legacy);changed=true;}
+    list.forEach(function(g){var found=terms.filter(function(p){return !p.legacy&&p.start<=g.date&&p.end>=g.date;})[0]||legacy;g.term=found.id;changed=true;});
+    if(!GR().some(function(g){return g.sid===sj.id&&g.term===legacy.id;})){S.gradePeriods=S.gradePeriods.filter(function(p){return p.id!==legacy.id;});changed=true;}
+  });
+  return changed;
+}
+function gradeTermStat(sj,term){
+  var l=GR().filter(function(g){return g.sid===sj.id&&g.term===term.id;}),mode=gradeMode(sj),avg=null,weightSum=0,criteriaRows=[];
+  if(mode==='percentage'){
+    var weighted=0;l.forEach(function(g){var w=Math.max(0,+g.weight||0);weightSum+=w;weighted+=g.score*w;});if(weightSum)avg=weighted/weightSum;
+  }else if(mode==='criteria'){
+    var cs=Array.isArray(sj.criteria)?sj.criteria:[];
+    criteriaRows=cs.map(function(c){var vals=l.filter(function(g){return Array.isArray(g.criteria)&&g.criteria.indexOf(c.id)>-1;}).map(function(g){return g.score;});return {c:c,n:vals.length,avg:vals.length?mean(vals):null};}).filter(function(x){return x.n;});
+    if(criteriaRows.length)avg=mean(criteriaRows.map(function(x){return x.avg;}));
+  }else if(l.length)avg=mean(l.map(function(g){return g.score;}));
+  return {term:term,l:l,n:l.length,avg:avg,weightSum:weightSum,criteriaRows:criteriaRows};
+}
 function subjStat(sj){
-  var l=GR().filter(function(g){return g.sid===sj.id;}).sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:0;}),sum=0;
-  l.forEach(function(g){sum+=g.score;});
-  return {l:l,n:l.length,sum:sum,avg:l.length?sum/l.length:null};
+  var l=GR().filter(function(g){return g.sid===sj.id;}).sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:0;}),periods=gradePeriods(sj).slice().sort(function(a,b){if(a.legacy!==b.legacy)return a.legacy?1:-1;return a.start<b.start?-1:a.start>b.start?1:0;}).map(function(p){return gradeTermStat(sj,p);}),filled=periods.filter(function(p){return p.avg!==null;});
+  return {l:l,n:l.length,sum:l.reduce(function(s,g){return s+g.score;},0),avg:filled.length?mean(filled.map(function(p){return p.avg;})):null,periods:periods,filledPeriods:filled};
 }
 function diffOf(sj){
   var d=sj&&sj.diff;
   if(d==='e')return {lvl:1,auto:false};if(d==='m')return {lvl:2,auto:false};if(d==='h')return {lvl:3,auto:false};
   var st=sj?subjStat(sj):null;
-  if(!st||!st.n)return {lvl:2,auto:true,nodata:true};
+  if(!st||!st.n||st.avg===null)return {lvl:2,auto:true,nodata:true};
   return {lvl:st.avg<5.5?3:st.avg<7.5?2:1,auto:true};
 }
 function diffMul(sid){var sj=sid?subjById(sid):null;return sj?({1:.8,2:1,3:1.3})[diffOf(sj).lvl]:1;}
 function classLoad(d){
   var wd=wdayOf(d);if(wd>=S.sched.days)return 0;
+  if(isFree(dkey(new Date(d).getTime())))return 0;
   var wk=weekFor(d),L=0;
   S.classes.forEach(function(c){
     var sj=subjById(c.sid);if(!sj||c.day!==wd)return;
@@ -2892,61 +3388,114 @@ function classLoad(d){
   return L;
 }
 function gradesSub(){
-  var a=S.subjects.map(subjStat).filter(function(x){return x.n;}).map(function(x){return x.avg;});
+  if(migrateLegacyGrades())save();
+  var a=S.subjects.map(subjStat).filter(function(x){return x.avg!==null;}).map(function(x){return x.avg;});
   return a.length?'Media general '+fmtG(mean(a)):'Sin notas todavía';
 }
 function goalMsg(sj,st){
-  var g=sj.goal||0,N=Math.max(1,sj.rem||1);if(!g)return '';
-  if(!st.n)return 'Para llegar a un '+fmtG(g)+' necesitas una media de '+fmtG(g)+' en tus '+N+(N===1?' evaluación':' evaluaciones')+'.';
-  var need=(g*(st.n+N)-st.sum)/N;
-  if(need<=0)return '¡Meta asegurada! Aunque sacaras un 0 en lo que queda, tu media final sería de '+fmtG(st.sum/(st.n+N))+' o más.';
-  if(need>10)return 'Con la media simple ya no se puede llegar a '+fmtG(g)+': con un 10 en lo que queda tu final sería '+fmtG((st.sum+10*N)/(st.n+N))+'.';
-  return 'Para llegar a '+fmtG(g)+' necesitas sacar de media un '+fmtG(need)+' en '+(N===1?'la evaluación que te queda':'las '+N+' evaluaciones que te quedan')+'.';
+  var g=sj.goal||0;if(!g)return '';
+  if(st.avg===null)return 'Aún no hay periodos con notas para comparar con tu meta.';
+  return st.avg>=g?'¡Has alcanzado tu meta en la media de los periodos!':'Tu media actual de periodos es '+fmtG(st.avg)+'; la meta es '+fmtG(g)+'.';
+}
+function termDate(p){return [p.start,p.end].filter(Boolean).map(function(d){return F_DAY.format(new Date(d+'T12:00:00'));}).join(' – ');}
+function periodsSub(){
+  var n=gradePeriods().filter(function(p){return !p.legacy;}).length;
+  return n?n+(n===1?' período':' períodos')+' compartidos':'Trimestres y evaluaciones';
+}
+function termStatus(p,td){return p.end<td?'Terminado':p.start>td?'Próximo':'En curso';}
+function vPeriods(){
+  if(migrateLegacyGrades())save();
+  var td=todayKey(),all=gradePeriods(),list=all.filter(function(p){return !p.legacy;}).sort(function(a,b){return a.start<b.start?-1:a.start>b.start?1:0;});
+  var pe=ui.periodEdit?list.filter(function(p){return p.id===ui.periodEdit.id;})[0]:null;
+  var h=backBar('Períodos','more')+'<section class="card stack"><p class="muted small" style="margin:0">Los períodos (trimestres, cuatrimestres, evaluaciones…) son comunes a todas tus asignaturas. Las notas se agrupan dentro de ellos, y la nota final de cada asignatura es la media de los períodos que tengan notas.</p></section>';
+  h+='<section class="card stack" id="periodForm"><h3>'+(pe?'Editar período':'Nuevo período')+'</h3><input class="field" id="pName" maxlength="40" placeholder="Nombre · 1.er trimestre, cuatrimestre…" aria-label="Nombre del período" value="'+esc(pe?pe.name:'')+'"><div class="twin"><label class="stack" style="gap:4px"><span class="small muted">Fecha de inicio</span><input class="field" id="pStart" type="date" value="'+esc(pe?pe.start:'')+'"></label><label class="stack" style="gap:4px"><span class="small muted">Fecha de fin</span><input class="field" id="pEnd" type="date" value="'+esc(pe?pe.end:'')+'"></label></div><div id="periodErr" class="small" style="color:var(--danger)" role="alert"></div><div class="row">'+(pe?'<button class="btn sm" data-a="perSave" data-v="'+esc(pe.id)+'">Guardar período</button><button class="btn sm ghost" data-a="perCancel">Cancelar</button>':'<button class="btn sm" data-a="perAdd">'+ic('plus',16)+' Añadir período</button>')+'</div></section>';
+  if(!list.length)h+='<section class="card"><p class="muted" style="margin:0">Todavía no hay períodos. Crea el primero arriba; después podrás registrar notas en Asignaturas, notas y metas.</p></section>';
+  else h+='<section class="day"><h3>Tus períodos ('+list.length+')</h3>'+list.map(function(p){
+    var notes=GR().filter(function(g){return g.term===p.id&&subjById(g.sid);}),avgs=S.subjects.map(function(sj){return gradeTermStat(sj,p).avg;}).filter(function(a){return a!==null;}),avg=avgs.length?mean(avgs):null,stt=termStatus(p,td),del=ui.periodDel===p.id;
+    var tail=del?(notes.length?'<div class="alertc"><span>Este período tiene '+notes.length+(notes.length===1?' nota asignada':' notas asignadas')+'. Cámbialas de período o elimínalas antes de borrarlo.</span></div><div class="row"><button class="btn sm ghost" data-a="perDelCancel">Entendido</button></div>':'<div class="alertc"><span>Se eliminará «'+esc(p.name)+'». No hay notas asignadas.</span></div><div class="row"><button class="btn sm danger" data-a="perDelOk" data-v="'+esc(p.id)+'">Confirmar eliminar</button><button class="btn sm ghost" data-a="perDelCancel">Cancelar</button></div>'):'<div class="row" style="flex-wrap:wrap"><button class="btn sm ghost" data-a="perEdit" data-v="'+esc(p.id)+'">'+ic('edit',16)+' Editar</button><button class="btn sm ghost" data-a="perDel" data-v="'+esc(p.id)+'">Eliminar</button></div>';
+    return '<div class="card stack period-item"><div class="mrow"><span class="mid"><b>'+esc(p.name)+'</b><span class="small muted">'+esc(termDate(p))+' · '+notes.length+(notes.length===1?' nota':' notas')+'</span><span class="chips"><span class="chip">'+stt+'</span></span></span><span class="big grade-average" style="color:'+(avg===null?'var(--muted)':gcol(avg))+'">'+(avg===null?'–':fmtG(avg))+'</span></div>'+tail+'</div>';
+  }).join('')+'</section>';
+  var legacy=all.filter(function(p){return p.legacy;});
+  if(legacy.length)h+='<section class="card stack"><h3>Notas sin período</h3><p class="muted small" style="margin:0">Estas notas se crearon antes de que existieran los períodos. Crea un período que incluya sus fechas y se asignarán solas.</p>'+legacy.map(function(p){var sj=subjById(p.sid),n=GR().filter(function(g){return g.term===p.id;}).length;return sj?'<div class="row between small"><span>'+esc(sj.name)+' · '+esc(termDate(p))+'</span><b>'+n+(n===1?' nota':' notas')+'</b></div>':'';}).join('')+'</section>';
+  return h;
+}
+function periodPanel(sj,st,id){
+  var h='<div class="stack" style="gap:8px"><div class="stack" style="gap:6px"><span class="small muted">Cómo se calcula la nota</span><select class="field" data-g="mode" data-s="'+id+'"><option value="mean"'+(gradeMode(sj)==='mean'?' selected':'')+'>Media por periodo</option><option value="percentage"'+(gradeMode(sj)==='percentage'?' selected':'')+'>Ponderación por porcentaje</option><option value="criteria"'+(gradeMode(sj)==='criteria'?' selected':'')+'>Ponderación por criterios</option></select><span class="small muted">'+(gradeMode(sj)==='percentage'?'Asigna a cada nota su porcentaje del periodo (hasta un 100 %).':gradeMode(sj)==='criteria'?'La media de cada criterio se combina con el resto de criterios evaluados.':'')+' La nota final es la media de los periodos que tengan notas.</span></div>';
+  var selected=ui.gradePeriodSel&&ui.gradePeriodSel[sj.id]||'';
+  h+='<div class="stack" style="gap:6px"><div class="row between"><b>Períodos</b><button class="btn sm ghost" data-a="tab" data-v="periods">'+ic('edit',16)+' Gestionar períodos</button></div>';
+  if(st.periods.length){
+    h+='<button class="btn sm '+(!selected?'':'ghost')+'" data-a="termSelect" data-s="'+id+'" data-v="" aria-pressed="'+(!selected)+'">Todos los periodos</button>'+st.periods.map(function(x){var active=selected===x.term.id;return '<button class="mrow '+(active?'on':'')+'" style="width:100%;text-align:left" data-a="termSelect" data-s="'+id+'" data-v="'+esc(x.term.id)+'" aria-pressed="'+active+'"><span class="mid"><b>'+esc(x.term.name)+'</b><span class="small muted">'+esc(termDate(x.term))+' · '+x.n+' '+(x.n===1?'nota':'notas')+(gradeMode(sj)==='percentage'?' · '+fmtG(x.weightSum)+' % ponderado':'')+'</span></span><b style="color:'+(x.avg===null?'var(--muted)':gcol(x.avg))+'">'+(x.avg===null?'–':fmtG(x.avg))+'</b></button>';}).join('');
+  }else h+='<span class="small muted">Aún no hay períodos. Créalos en Más → Períodos y estarán disponibles en todas las asignaturas.</span>';
+  h+='</div>';
+  if(gradeMode(sj)==='criteria'){
+    h+='<div class="stack" style="gap:6px"><b>Criterios de evaluación</b>'+(Array.isArray(sj.criteria)&&sj.criteria.length?sj.criteria.map(function(c){return '<span class="small">'+esc(c.name)+'</span>';}).join(''):'<span class="small muted">Añade criterios y selecciónalos al registrar cada nota.</span>')+'<div class="row"><input class="field" id="criterionName_'+id+'" maxlength="40" placeholder="Ej. Expresión oral"><button class="btn sm" data-a="criterionAdd" data-v="'+id+'">Añadir criterio</button></div></div>';
+  }
+  return h+'</div>';
 }
 function gradeCard(sj){
-  var st=subjStat(sj),df=diffOf(sj),g=sj.goal||0,N=Math.max(1,sj.rem||1),id=esc(sj.id);
-  var h='<section class="card stack"><div class="mrow">'+subjBadge(sj)+'<span class="mid"><b>'+esc(sj.name)+'</b><span class="small muted">'+st.n+(st.n===1?' nota':' notas')+' · Dificultad: '+DIFFN[df.lvl].toLowerCase()+(df.auto?' (automática'+(df.nodata?', sin notas aún':'')+')':'')+'</span></span><span class="big" style="color:'+(st.avg===null?'var(--muted)':gcol(st.avg))+'">'+(st.avg===null?'–':fmtG(st.avg))+'</span></div>';
-  if(g&&st.avg!==null)h+='<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="'+g+'" aria-valuenow="'+Math.min(g,Math.round(st.avg*10)/10)+'"><i style="width:'+Math.min(100,st.avg/g*100)+'%;background:'+(st.avg>=g?'var(--m3)':'var(--accent)')+'"></i></div>';
-  if(g)h+='<p class="small" style="margin:0"><b>Meta '+fmtG(g)+'.</b> '+esc(goalMsg(sj,st))+'</p>';
+  var st=subjStat(sj),df=diffOf(sj),g=sj.goal||0,id=esc(sj.id),selected=ui.gradePeriodSel&&ui.gradePeriodSel[sj.id]||'',shown=selected?st.l.filter(function(x){return x.term===selected;}):st.l;
+  var h='<section class="card stack grade-card"><div class="mrow"><span class="mid"><b>Notas · '+esc(sj.name)+'</b><span class="small muted">'+st.n+(st.n===1?' nota':' notas')+' · Dificultad: '+DIFFN[df.lvl].toLowerCase()+(df.auto?' (automática'+(df.nodata?', sin notas aún':'')+')':'')+'</span></span><span class="big grade-average" style="color:'+(st.avg===null?'var(--muted)':gcol(st.avg))+'">'+(st.avg===null?'–':fmtG(st.avg))+'</span></div>';
+  if(g&&st.avg!==null)h+='<div class="bar grade-goal-bar" role="progressbar" aria-valuemin="0" aria-valuemax="'+g+'" aria-valuenow="'+Math.min(g,Math.round(st.avg*10)/10)+'"><i style="width:'+Math.min(100,st.avg/g*100)+'%;background:'+(st.avg>=g?'var(--m3)':'var(--accent)')+'"></i></div>';
+  if(g)h+='<p class="small grade-goal-text" style="margin:0"><b>Meta '+fmtG(g)+'.</b> '+esc(goalMsg(sj,st))+'</p>';
   h+='<div class="stack" style="gap:6px"><span class="small muted">Dificultad</span><div class="seg" style="grid-template-columns:repeat(4,1fr)" role="group" aria-label="Dificultad">'+[['auto','Auto'],['e','Fácil'],['m','Media'],['h','Difícil']].map(function(t){var on=(sj.diff||'auto')===t[0];return '<button data-a="subDiff" data-s="'+id+'" data-v="'+t[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+t[1]+'</button>';}).join('')+'</div></div>';
-  h+='<div class="twin"><div class="stack" style="gap:6px"><span class="small muted">Nota meta (0–10)</span><input class="field" type="number" min="0" max="10" step="0.1" inputmode="decimal" data-g="goal" data-s="'+id+'" value="'+(g||'')+'" placeholder="Ej. 10"></div><div class="stack" style="gap:6px"><span class="small muted">Evaluaciones que quedan</span><input class="field" type="number" min="1" max="30" step="1" inputmode="numeric" data-g="rem" data-s="'+id+'" value="'+N+'"></div></div>';
-  h+=st.l.slice(0,8).map(function(x){return '<button class="row between small" style="text-align:left;width:100%" data-a="editGr" data-v="'+esc(x.id)+'"><span style="overflow-wrap:anywhere">'+esc(x.name||GTYPES[x.type])+' <span class="muted">· '+GTYPES[x.type]+' · '+esc(dayLabel(x.date))+'</span></span><b style="color:'+gcol(x.score)+'">'+fmtG(x.score)+'</b></button>';}).join('');
-  if(st.l.length>8)h+='<span class="small muted">y '+(st.l.length-8)+' notas más…</span>';
+  h+='<div class="stack" style="gap:6px"><span class="small muted">Nota meta (0–10)</span><input class="field" type="number" min="0" max="10" step="0.1" inputmode="decimal" data-g="goal" data-s="'+id+'" value="'+(g||'')+'" placeholder="Ej. 10"></div>';
+  h+=periodPanel(sj,st,id);
+  h+=shown.slice(0,8).map(function(x){var p=gradePeriod(sj,x.term);return '<button class="row between small grade-item" style="text-align:left;width:100%" data-a="editGr" data-v="'+esc(x.id)+'"><span style="overflow-wrap:anywhere">'+esc(x.name||GTYPES[x.type])+' <span class="muted">· '+GTYPES[x.type]+' · '+esc(p?p.name:'Sin periodo')+' · '+esc(dayLabel(x.date))+'</span></span><b style="color:'+gcol(x.score)+'">'+fmtG(x.score)+'</b></button>';}).join('');
+  if(selected&&!shown.length)h+='<span class="small muted">Todavía no hay notas en este periodo.</span>';
+  if(shown.length>8)h+='<span class="small muted">y '+(shown.length-8)+' notas más…</span>';
   return h+'<div><button class="btn sm" data-a="newGr" data-v="'+id+'">'+ic('plus',16)+' Añadir nota</button></div></section>';
 }
 function vGrades(){
   var h=backBar('Notas y metas','more');
   if(!S.subjects.length)return h+'<section class="card"><p class="muted" style="margin:0">Primero crea tus asignaturas en Más → Asignaturas.</p></section>';
-  var all=S.subjects.map(subjStat).filter(function(x){return x.n;});
-  h+='<section class="card stack"><div class="tiles"><div class="tile"><b>'+(all.length?fmtG(mean(all.map(function(x){return x.avg;}))):'–')+'</b><span class="small muted">media general</span></div><div class="tile"><b>'+GR().filter(function(g){return subjById(g.sid);}).length+'</b><span class="small muted">notas</span></div></div><p class="muted small" style="margin:0">La nota de cada asignatura es la media simple de sus notas (más métodos de ponderación llegarán más adelante). La dificultad automática sale de esa media: menos de 5,5 es difícil y más de 7,5 es fácil. Afecta al estrés del día.</p></section>';
+  if(migrateLegacyGrades())save();
+  var all=S.subjects.map(subjStat).filter(function(x){return x.avg!==null;});
+  h+='<section class="card stack"><div class="tiles"><div class="tile"><b>'+(all.length?fmtG(mean(all.map(function(x){return x.avg;}))):'–')+'</b><span class="small muted">media general</span></div><div class="tile"><b>'+GR().filter(function(g){return subjById(g.sid);}).length+'</b><span class="small muted">notas</span></div></div><p class="muted small" style="margin:0">Organiza las notas por periodos. Puedes calcular cada periodo con media, porcentajes o criterios; la nota final es la media de los periodos que tengan notas. La dificultad automática sale de esa media y afecta al estrés del día.</p></section>';
   return h+S.subjects.slice().sort(byName).map(gradeCard).join('');
 }
 /* formulario de nota */
 function openGrade(id,sid){
   var g=id?GR().filter(function(x){return x.id===id;})[0]:null;
-  gf={id:id||null,sid:g?g.sid:(sid||(S.subjects.slice().sort(byName)[0]||{}).id||''),name:g?g.name:'',type:g?g.type:'exam',score:g?String(g.score):'',date:g?g.date:dkey(Date.now()),del:false};
+  var gs=g?g.sid:(sid||(S.subjects.slice().sort(byName)[0]||{}).id||''),sj=subjById(gs),periods=sj?gradePeriods(sj):[],first=periods.filter(function(p){return !p.legacy;})[0]||periods[0];
+  gf={id:id||null,sid:gs,name:g?g.name:'',type:g?g.type:'exam',score:g?String(g.score):'',date:g?g.date:dkey(Date.now()),term:g?g.term:(first?first.id:''),weight:g&&g.weight!=null?String(g.weight):'',criteria:g&&Array.isArray(g.criteria)?g.criteria.slice():[],del:false};
   renderGrade();$sheet.classList.add('open');
   try{lastFocus=document.activeElement;}catch(e){}
 }
 function renderGrade(){
+  var gsj=subjById(gf.sid),gps=gsj?gradePeriods(gsj).slice().sort(function(a,b){if(a.legacy!==b.legacy)return a.legacy?1:-1;return a.start<b.start?-1:a.start>b.start?1:0;}):[],mode=gsj?gradeMode(gsj):'mean';
+  var periodHtml=gps.length?'<div class="stack" style="gap:6px"><h3>Periodo</h3><select id="gTerm" class="field">'+gps.map(function(p){return '<option value="'+esc(p.id)+'"'+(gf.term===p.id?' selected':'')+'>'+esc(p.name)+' · '+esc(termDate(p))+'</option>';}).join('')+'</select></div>':'<div class="stack" style="gap:6px"><p class="small muted" style="margin:0">Primero crea un período en Más → Períodos.</p><div><button class="btn sm" data-a="gotoPeriods">Ir a Períodos</button></div></div>';
+  var weightHtml=mode==='percentage'?'<div class="stack" style="gap:6px"><h3>Peso de esta nota (%)</h3><input id="gWeight" class="field" type="number" min="0.1" max="100" step="0.1" inputmode="decimal" value="'+esc(gf.weight)+'" placeholder="Ej. 25"></div>':'';
+  var criteriaHtml=mode==='criteria'?'<div class="stack" style="gap:6px"><h3>Criterios asociados</h3>'+(gsj&&gsj.criteria&&gsj.criteria.length?gsj.criteria.map(function(c){var on=gf.criteria.indexOf(c.id)>-1;return '<button class="btn sm '+(on?'':'ghost')+'" data-a="gradeCriterion" data-v="'+esc(c.id)+'" aria-pressed="'+on+'">'+(on?'✓ ':'')+esc(c.name)+'</button>';}).join(''):'<span class="small muted">Añade criterios a la asignatura antes de guardar una nota con este método.</span>')+'</div>':'';
   $sheet.innerHTML='<div class="sheetbox"><div class="row between"><h2>'+(gf.id?'Editar nota':'Nueva nota')+'</h2><button class="iconbtn" data-a="close" aria-label="Cerrar">'+ic('x')+'</button></div>'+
     '<div class="stack" style="gap:6px"><h3>Asignatura</h3><select id="gSubj" class="field">'+S.subjects.slice().sort(byName).map(function(x){return '<option value="'+esc(x.id)+'"'+(gf.sid===x.id?' selected':'')+'>'+esc(x.name)+'</option>';}).join('')+'</select></div>'+
     '<div class="stack" style="gap:6px"><h3>Tipo</h3><div class="seg" style="grid-template-columns:repeat(3,1fr)">'+Object.keys(GTYPES).map(function(k){return '<button data-a="grType" data-v="'+k+'" class="'+(gf.type===k?'on':'')+'" aria-pressed="'+(gf.type===k)+'">'+GTYPES[k]+'</button>';}).join('')+'</div></div>'+
-    fld('gName','Nombre (opcional)',gf.name,'maxlength="60" placeholder="Por ejemplo, Examen del tema 3"')+
+    periodHtml+weightHtml+criteriaHtml+fld('gName','Nombre (opcional)',gf.name,'maxlength="60" placeholder="Por ejemplo, Examen del tema 3"')+
     '<div class="twin"><div class="stack" style="gap:6px"><h3>Nota (0–10)</h3><input id="gScore" class="field" type="number" min="0" max="10" step="0.01" inputmode="decimal" value="'+esc(gf.score)+'" placeholder="7,5"></div><div class="stack" style="gap:6px"><h3>Fecha</h3><input id="gDate" class="field" type="date" value="'+esc(gf.date)+'"></div></div>'+
     '<div id="fErr" class="small" style="color:var(--danger)" role="alert"></div><div class="row" style="flex-wrap:wrap"><button class="btn" style="flex:1" data-a="grSave">Guardar</button>'+(gf.id?'<button class="btn danger" data-a="grDel">'+(gf.del?'Confirmar eliminar':'Eliminar')+'</button>':'')+'</div></div>';
 }
 function readGrade(){
   var g=function(id){var e=document.getElementById(id);return e?e.value:null;},v;
-  if((v=g('gSubj'))!==null)gf.sid=v;if((v=g('gName'))!==null)gf.name=v;if((v=g('gScore'))!==null)gf.score=v;if((v=g('gDate'))!==null)gf.date=v;
+  if((v=g('gSubj'))!==null)gf.sid=v;if((v=g('gTerm'))!==null)gf.term=v;if((v=g('gWeight'))!==null)gf.weight=v;if((v=g('gName'))!==null)gf.name=v;if((v=g('gScore'))!==null)gf.score=v;if((v=g('gDate'))!==null)gf.date=v;
 }
 function saveGrade(){
   readGrade();var err=document.getElementById('fErr'),sc=parseFloat(String(gf.score).replace(',','.'));
-  if(!subjById(gf.sid)){err.textContent='Elige una asignatura.';return;}
+  var sj=subjById(gf.sid),term=sj&&gradePeriod(sj,gf.term);
+  if(!sj){err.textContent='Elige una asignatura.';return;}
+  if(!term){err.textContent='Crea o selecciona un período (Más → Períodos) antes de guardar la nota.';return;}
   if(isNaN(sc)||sc<0||sc>10){err.textContent='La nota debe estar entre 0 y 10.';return;}
   if(!/^\d{4}-\d\d-\d\d$/.test(gf.date)){err.textContent='Elige una fecha.';return;}
+  if(gf.date<term.start||gf.date>term.end){err.textContent='La fecha de la nota debe estar dentro del periodo seleccionado.';return;}
+  var mode=gradeMode(sj),weight=parseFloat(String(gf.weight).replace(',','.'));
+  if(mode==='percentage'){
+    if(isNaN(weight)||weight<=0||weight>100){err.textContent='Indica un porcentaje mayor que 0 y hasta 100.';return;}
+    var sum=GR().filter(function(x){return x.sid===gf.sid&&x.term===gf.term&&x.id!==gf.id;}).reduce(function(a,x){return a+(+x.weight||0);},0);
+    if(sum+weight>100.0001){err.textContent='Los pesos de las notas del periodo no pueden superar el 100 %.';return;}
+  }
+  if(mode==='criteria'&&(!gf.criteria||!gf.criteria.length)){err.textContent='Selecciona al menos un criterio.';return;}
   var o=gf.id?GR().filter(function(x){return x.id===gf.id;})[0]:null;if(!o){o={id:nid('g')};GR().push(o);}
-  Object.assign(o,{sid:gf.sid,name:gf.name.trim().slice(0,60),type:gf.type,score:Math.round(sc*100)/100,date:gf.date});
+  Object.assign(o,{sid:gf.sid,name:gf.name.trim().slice(0,60),type:gf.type,score:Math.round(sc*100)/100,date:gf.date,term:gf.term});
+  if(mode==='percentage')o.weight=Math.round(weight*10)/10;else delete o.weight;
+  if(mode==='criteria')o.criteria=gf.criteria.slice();else delete o.criteria;
   touch();save();closeEditor();render(true);
 }
 function delGrade(){
@@ -2959,10 +3508,13 @@ function diffStressCard(){
   return '<section class="card stack"><h3>Dificultad y estrés</h3><p class="small" style="margin:0">'+(L>0?'Hoy tus clases suman unos <b>+'+pts+'</b> puntos al índice según su dificultad.':'Hoy no tienes clases que sumen estrés.')+' Los exámenes, entregas y tareas de asignaturas difíciles pesan más (×1,3) y los de las fáciles menos (×0,8).</p><div class="chips" style="margin:0">'+S.subjects.slice().sort(byName).map(function(sj){return '<span class="chip"><span class="dot" style="background:'+esc(sj.color)+'"></span>'+esc(sj.name)+' · '+DIFFN[diffOf(sj).lvl]+'</span>';}).join('')+'</div><div><button class="btn sm ghost" data-a="tab" data-v="grades">Ver notas y dificultad</button></div></section>';
 }
 document.addEventListener('change',function(ev){
-  var t=ev.target;if(!t||!t.getAttribute||!t.getAttribute('data-g'))return;
+  var t=ev.target;if(!t||!t.getAttribute)return;
+  if(t.id==='gSubj'&&gf){readGrade();gf.sid=t.value;var subj=subjById(gf.sid),ps=subj?gradePeriods(subj):[],fp=ps.filter(function(p){return !p.legacy;})[0]||ps[0];gf.term=fp?fp.id:'';gf.weight='';gf.criteria=[];renderGrade();return;}
+  if(!t.getAttribute('data-g'))return;
   var sj=subjById(t.getAttribute('data-s'));if(!sj)return;
   var f=t.getAttribute('data-g'),v=parseFloat(String(t.value).replace(',','.'));
   if(f==='goal')sj.goal=(!isNaN(v)&&v>0&&v<=10)?Math.round(v*10)/10:0;
+  else if(f==='mode')sj.gradeMode=['mean','percentage','criteria'].indexOf(t.value)>-1?t.value:'mean';
   else if(f==='rem')sj.rem=(!isNaN(v)&&v>=1)?Math.min(30,Math.round(v)):1;
   save();render(true);
 });
@@ -3203,7 +3755,7 @@ function mediaStats(cb){
 function fmtSize(b){return b>=1048576?(b/1048576).toFixed(b>=104857600?0:1)+' MB':Math.max(1,Math.round(b/1024))+' KB';}
 function blobToDataUrl(b,cb){var r=new FileReader();r.onload=function(){cb(String(r.result));};r.onerror=function(){cb(null);};r.readAsDataURL(b);}
 function exportFull(cb){
-  var o={v:1,people:S.people,pgroups:S.pgroups,rels:S.rels,days:S.days,subs:S.subs,skin:S.skin,subjects:S.subjects,teachers:S.teachers,classes:S.classes,events:S.events,grades:GR(),absences:S.absences,absJust:!!S.absJust,pomo:S.pomo,sessions:S.sessions,sched:S.sched,scales:S.scales,cats:S.cats,acts:S.acts,entries:S.entries.filter(function(x){return !x.ex;}),goals:S.goals.filter(function(g){return !g.ex;}),reminder:S.reminder,moodNames:S.moodNames,trustNames:S.trustNames,palette:S.palette};
+  var o={v:1,people:S.people,pgroups:S.pgroups,rels:S.rels,days:S.days,subs:S.subs,skin:S.skin,profile:S.profile,subjects:S.subjects,gradePeriods:gradePeriods(S.subjects[0]||null),teachers:S.teachers,classes:S.classes,events:S.events,grades:GR(),absences:S.absences,absJust:!!S.absJust,pomo:S.pomo,sessions:S.sessions,sched:S.sched,scales:S.scales,cats:S.cats,acts:S.acts,entries:S.entries.filter(function(x){return !x.ex;}),goals:S.goals.filter(function(g){return !g.ex;}),reminder:S.reminder,moodNames:S.moodNames,trustNames:S.trustNames,palette:S.palette};
   var used={};o.entries.forEach(function(e){(e.m||[]).forEach(function(m){used[m.id]=1;});});
   var ids=Object.keys(used),parts=[JSON.stringify(o).slice(0,-1)+',"media":['],first=true;
   (function next(){
@@ -3374,6 +3926,8 @@ function cmCatalog(){
     {cat:N,icon:'heart',name:'Personas',desc:'Fichas, grupos y relaciones',act:'navTab',tab:'people',kw:'contactos amigos familia'},
     {cat:N,icon:'globe',name:'Grafo de relaciones',desc:'Red de personas con física, grupos y filtros',act:'navTab',tab:'graph',kw:'relaciones conexiones red confianza personas grafo mapa obsidian'},
     {cat:N,icon:'cake',name:'Días importantes',desc:'Cumpleaños, aniversarios e hitos',act:'navTab',tab:'days',kw:'fechas cumpleanos aniversarios'},
+    {cat:N,icon:'beach',name:'Días libres',desc:'Vacaciones, puentes y festivos sin clase',act:'navTab',tab:'free',kw:'vacaciones puentes festivos festivo libre sin clase'},
+    {cat:N,icon:'cal',name:'Períodos',desc:'Trimestres y evaluaciones compartidos',act:'navTab',tab:'periods',kw:'trimestre cuatrimestre evaluacion periodo notas'},
     {cat:N,icon:'image',name:'Fototeca',desc:'Fotos y vídeos',act:'navTab',tab:'photos',kw:'galeria'},
     {cat:N,icon:'list',name:'Agenda',desc:'Tareas, exámenes y entregas',act:'navTab',tab:'agenda',kw:'pendientes deberes'},
     {cat:N,icon:'clock',name:'Horario',desc:'Clases semanales y aulas',act:'navTab',tab:'sched',kw:'clases semana'},
@@ -3499,10 +4053,10 @@ function execCmdItem(item){
     case 'newGrade':if(S.subjects.length)openGrade(null);else goTab('subj');break;
     case 'newPer':openPer(null);if(p.name)fo.name=p.name.slice(0,30);if(p.cat)fo.cat=p.cat;renderForm();break;
     case 'newDay':openDay(null,null,p.date||null);fo.dtype=p.dtype||'custom';if(p.name)fo.name=p.name.slice(0,80);dyDefaults(fo);renderForm();break;
-    case 'pomoStart':pomoEnsure();ui.tab='pomo';if(!S.pomoRun.run)pStart();render();break;
-    case 'openPerson':ui.perSel=item.id;ui.tab='person';ui.perN=5;ui.relDel=null;render();break;
+    case 'pomoStart':pomoEnsure();if(!S.pomoRun.run)pStart();goTab('pomo');break;
+    case 'openPerson':ui.perSel=item.id;ui.perN=5;ui.relDel=null;goTab('person');break;
     case 'openDayView':openDayView(item.id);break;
-    case 'filterAct':ui.fq='';ui.fm=[];ui.fx=false;ui.fa=item.id;ui.days=20;ui.tab='log';render();break;
+    case 'filterAct':ui.fq='';ui.fm=[];ui.fx=false;ui.fa=item.id;ui.days=20;goTab('log');break;
   }
 }
 document.addEventListener('mouseover',function(ev){
@@ -3522,9 +4076,10 @@ function subjBadge(sj,sz){return '<span class="sbadge" style="background:'+esc(s
 function soon(t,d){return header()+'<h2>'+t+'</h2><section class="card stack"><p class="muted" style="margin:0">'+d+'</p></section>';}
 function menuRow(tab,icon,title,sub){return '<button class="card mrow" data-a="tab" data-v="'+tab+'"><span class="sbadge" style="background:var(--accent-soft);color:var(--accent)">'+ic(icon,22)+'</span><span class="mid"><b>'+title+'</b><span class="small muted">'+sub+'</span></span>'+ic('right',18)+'</button>';}
 function vMore(){
-  return header()+'<h2>Más</h2>'+menuRow('subj','school','Asignaturas, notas y metas',S.subjects.length+' asignaturas · '+gradesSub())+menuRow('teach','users','Profesores',S.teachers.length+' guardados')+menuRow('days','cake','Días importantes',dyAll().length+' fechas')+menuRow('people','heart','Personas',S.people.length+' guardadas')+menuRow('graph','globe','Grafo de relaciones',S.rels.length+(S.rels.length===1?' conexión':' conexiones'))+menuRow('mood','brain','Estado anímico','Diagnóstico y pautas')+menuRow('abs','flag','Faltas y retrasos',S.absences.length+' registrados')+menuRow('pomo','timer','Pomodoro',S.sessions.length+' completados')+menuRow('stress','stats','Nivel de estrés',(function(){var n=stNow();return stLevel(n.r.i)[1]+' · '+n.r.i+'/100';})())+menuRow('photos','image','Fototeca',phCount()+' archivos')+menuRow('set','gear','Ajustes','Temas, ánimos, datos y copias');
+  return header()+'<h2>Más</h2>'+menuRow('acct','users','Cuenta de Mareas',esc(S.profile.name||'Perfil, datos y privacidad'))+menuRow('subj','school','Asignaturas, notas y metas',S.subjects.length+' asignaturas · '+gradesSub())+menuRow('periods','cal','Períodos',periodsSub())+menuRow('teach','users','Profesores',S.teachers.length+' guardados')+menuRow('days','cake','Días importantes',dyAll().length+' fechas')+menuRow('free','beach','Días libres',freeCountTxt())+menuRow('holidays','globe','Importar festivos','Festivos públicos de un país')+menuRow('recap','star','Resumen anual','Historias para guardar y compartir')+menuRow('people','heart','Personas',S.people.length+' guardadas')+menuRow('graph','globe','Grafo de relaciones',S.rels.length+(S.rels.length===1?' conexión':' conexiones'))+menuRow('mood','brain','Estado anímico','Diagnóstico y pautas')+menuRow('abs','flag','Faltas y retrasos',S.absences.length+' registrados')+menuRow('pomo','timer','Pomodoro',S.sessions.length+' completados')+menuRow('stress','stats','Nivel de estrés',(function(){var n=stNow();return stLevel(n.r.i)[1]+' · '+n.r.i+'/100';})())+menuRow('photos','image','Fototeca',phCount()+' archivos')+menuRow('set','gear','Ajustes','Temas, ánimos, datos y copias')+'<p class="small muted" style="text-align:center;margin:24px 0"><a href="landing.html">Conoce Mareas</a></p>';
 }
 function vSubj(){
+  if(migrateLegacyGrades())save();
   var h=backBar('Asignaturas','more')+'<div><button class="btn sm" data-a="newSubj">'+ic('plus',18)+' Nueva asignatura</button></div>';
   if(!S.subjects.length)return h+'<section class="card"><p class="muted" style="margin:0">Todavía no hay asignaturas. Crea la primera con el botón de arriba.</p></section>';
   return h+S.subjects.slice().sort(byName).map(function(sj){
@@ -3555,6 +4110,11 @@ function viewWk(){return S.sched.ab?(ui.schWk||curWeek()):'';}
 function clsFor(day,wk){
   return S.classes.filter(function(c){return (day===null||c.day===day)&&(!S.sched.ab||!c.week||c.week===wk)&&subjById(c.sid);}).sort(function(a,b){return a.day-b.day||tmin(a.start)-tmin(b.start);});
 }
+function schDate(wd,wk){
+  var base=mondayOf(new Date());
+  if(S.sched.ab&&wk&&wk!==curWeek())base=addDays(base,7);
+  return dkey(addDays(base,wd).getTime());
+}
 function schDay(){
   if(ui.schDay!==undefined&&ui.schDay!==null&&ui.schDay<S.sched.days)return ui.schDay;
   var w=wdayOf(Date.now());return w<S.sched.days?w:0;
@@ -3567,16 +4127,17 @@ function clsRow(c,now){
   return '<button class="card crow" style="--cc:'+esc(sj.color)+'" data-a="editCls" data-v="'+esc(c.id)+'"><span class="ctime"><b>'+esc(c.start)+'</b><span class="small muted">'+esc(c.end)+'</span></span><span class="mid"><b>'+esc(sj.name)+'</b>'+(sub?'<span class="small muted">'+esc(sub)+'</span>':'')+'</span>'+(live?'<span class="nowbadge">Ahora</span>':'')+(S.sched.ab&&c.week?'<span class="chip">'+esc(c.week)+'</span>':'')+'</button>';
 }
 function weekGrid(wk){
-  var nd=S.sched.days,cls=clsFor(null,wk).filter(function(c){return c.day<nd;});
+  var nd=S.sched.days,cls=clsFor(null,wk).filter(function(c){return c.day<nd;}),fr=[];
+  for(var q=0;q<nd;q++)fr.push(freeOn(schDate(q,wk)));
   var lo=8,hi=15;
   cls.forEach(function(c){lo=Math.min(lo,Math.floor(tmin(c.start)/60));hi=Math.max(hi,Math.ceil(tmin(c.end)/60));});
   var hp=52,px=hp/60,H=(hi-lo)*hp,td=wdayOf(Date.now()),h='<div class="wg" style="--nd:'+nd+';--hp:'+hp+'px"><div class="wgh"><div></div>';
-  for(var d=0;d<nd;d++)h+='<div class="'+(d===td?'td':'')+'">'+DN[d]+'</div>';
+  for(var d=0;d<nd;d++)h+='<div class="'+(d===td?'td':'')+(fr[d].length?' off':'')+'">'+DN[d]+(fr[d].length?'<small class="offtag">libre</small>':'')+'</div>';
   h+='</div><div class="wgb" style="height:'+H+'px"><div class="wgax">';
   for(var k=1;k<hi-lo;k++)h+='<span style="top:'+(k*hp)+'px">'+pad(lo+k)+'</span>';
   h+='</div>';
   for(var d2=0;d2<nd;d2++){
-    h+='<div class="wgc'+(d2===td?' td':'')+'">'+cls.filter(function(c){return c.day===d2;}).map(function(c){
+    h+='<div class="wgc'+(d2===td?' td':'')+(fr[d2].length?' off':'')+'"'+(fr[d2].length?' title="'+esc('Día libre: '+freeNames(fr[d2]))+'"':'')+'>'+(fr[d2].length?[]:cls.filter(function(c){return c.day===d2;})).map(function(c){
       var sj=subjById(c.sid),top=(tmin(c.start)-lo*60)*px,ht=Math.max(18,(tmin(c.end)-tmin(c.start))*px-2);
       return '<button class="cb" style="top:'+top+'px;height:'+ht+'px;background:'+esc(sj.color)+'" data-a="editCls" data-v="'+esc(c.id)+'" aria-label="'+esc(sj.name+' '+DF[c.day]+' '+c.start+' a '+c.end)+'"><b>'+esc(sj.name)+'</b>'+(c.room&&ht>34?'<span>'+esc(c.room)+'</span>':'')+'</button>';
     }).join('')+'</div>';
@@ -3592,10 +4153,10 @@ function vSched(){
   if(ui.schView==='week'){
     h+=clsFor(null,wk).length?'<section class="card" style="padding:10px 8px">'+weekGrid(wk)+'</section>':'<section class="card"><p class="muted" style="margin:0">Aún no hay clases. Pulsa «Clase» para añadir la primera.</p></section>';
   }else{
-    var sd=schDay(),td=wdayOf(Date.now());
-    h+='<div class="dchips" role="group" aria-label="Día">'+DN.slice(0,nd).map(function(n,i){return '<button class="dchip'+(i===sd?' on':'')+(i===td?' td':'')+'" data-a="schDay" data-v="'+i+'" aria-pressed="'+(i===sd)+'" aria-label="'+DF[i]+'">'+n+'<small>'+clsFor(i,wk).length+'</small></button>';}).join('')+'</div>';
-    var list=clsFor(sd,wk);
-    h+=list.length?list.map(function(c){return clsRow(c,sd===td?nowMin:0);}).join(''):'<section class="card"><p class="muted" style="margin:0">Sin clases el '+DF[sd]+'.</p></section>';
+    var sd=schDay(),td=wdayOf(Date.now()),sdate=schDate(sd,wk),sfr=freeOn(sdate),isNow=sd===td&&(!S.sched.ab||wk===curWeek());
+    h+='<div class="dchips" role="group" aria-label="Día">'+DN.slice(0,nd).map(function(n,i){var fi=isFree(schDate(i,wk));return '<button class="dchip'+(i===sd?' on':'')+(i===td?' td':'')+(fi?' off':'')+'" data-a="schDay" data-v="'+i+'" aria-pressed="'+(i===sd)+'" aria-label="'+DF[i]+(fi?', día libre':'')+'">'+n+'<small>'+(fi?'libre':clsFor(i,wk).length)+'</small></button>';}).join('')+'</div>';
+    var list=sfr.length?[]:clsFor(sd,wk);
+    h+=sfr.length?freeBanner(sfr,sdate):list.length?list.map(function(c){return clsRow(c,isNow?nowMin:0);}).join(''):'<section class="card"><p class="muted" style="margin:0">Sin clases el '+DF[sd]+'.</p></section>';
   }
   h+='<section class="card stack"><h3>Opciones del horario</h3><div class="stack" style="gap:6px"><span class="small muted">Días visibles</span><div class="seg" style="grid-template-columns:repeat(3,1fr)">'+[5,6,7].map(function(n){return '<button data-a="schDays" data-v="'+n+'" class="'+(nd===n?'on':'')+'">'+(n===5?'Lun–Vie':n===6?'Lun–Sáb':'Lun–Dom')+'</button>';}).join('')+'</div></div>'+
     '<button class="btn sm ghost" data-a="schAB" aria-pressed="'+S.sched.ab+'">'+(S.sched.ab?'Semanas A/B: activadas':'Semanas A/B: desactivadas')+'</button>'+
@@ -3603,9 +4164,9 @@ function vSched(){
   return h;
 }
 function homeToday(){
-  var wk=curWeek(),td=wdayOf(Date.now()),list=clsFor(td,wk),now=new Date(),nm=now.getHours()*60+now.getMinutes();
-  if(!S.classes.length)return '';
-  return '<section class="card stack"><div class="row between"><h3>Clases de hoy</h3><button class="btn sm ghost" data-a="tab" data-v="sched">Horario</button></div>'+(list.length?list.map(function(c){return clsRow(c,nm);}).join(''):'<p class="muted small" style="margin:0">Hoy no tienes clases.</p>')+'</section>';
+  var wk=curWeek(),td=wdayOf(Date.now()),tk=todayKey(),frs=freeOn(tk),list=frs.length?[]:clsFor(td,wk),now=new Date(),nm=now.getHours()*60+now.getMinutes();
+  if(!S.classes.length&&!frs.length)return '';
+  return '<section class="card stack"><div class="row between"><h3>Clases de hoy</h3><button class="btn sm ghost" data-a="tab" data-v="sched">Horario</button></div>'+(frs.length?freeBanner(frs,tk).replace('<section class="card freebar"','<div class="freebar"').replace('</section>','</div>'):list.length?list.map(function(c){return clsRow(c,nm);}).join(''):'<p class="muted small" style="margin:0">Hoy no tienes clases.</p>')+'</section>';
 }
 /* class form */
 function openCls(id,day){
@@ -3745,7 +4306,7 @@ function renderTabs(){
   var T=[['home','Inicio','home'],['agenda','Agenda','list'],['sched','Horario','clock'],['log','Ánimo','wave']];
   var X=[['subj','Asignaturas','school'],['people','Personas','heart'],['graph','Relaciones','globe'],['mood','Estado anímico','brain'],['stress','Estrés','stats']];
   var more=['more','Más','dots'];
-  var grp={log:['log','cal','stats','mood'],more:['more','set','subj','teach','abs','pomo','stress','grades','photos','people','person','days','graph']};
+  var grp={log:['log','cal','stats','mood'],more:['more','set','subj','teach','abs','pomo','stress','grades','photos','people','person','days','free','periods','holidays','recap','graph','acct']};
   var xOn=function(id){return id==='people'?(ui.tab==='people'||ui.tab==='person'):ui.tab===id;};
   var anyX=land&&X.some(function(x){return xOn(x[0]);});
   var btn=function(t,on){return '<button data-a="tab" data-v="'+t[0]+'" class="'+(on?'on':'')+'" aria-label="'+t[1]+'" title="'+t[1]+'"'+(on?' aria-current="page"':'')+'>'+ic(t[2],22)+'<span class="tlb">'+t[1]+'</span></button>';};
@@ -3766,13 +4327,12 @@ try{mqLand.addEventListener('change',function(){renderTabs();});}catch(e){try{mq
 function goTab(tab,replace){
   if(!tab||tab===ui.tab)return;
   if(!replace)navStack.push(ui.tab);
-  ui.tab=tab;ui.wipe=false;ui.delAct=null;
+  ui.tab=tab;ui.wipe=false;ui.delAct=null;if(tab==='acct')ui.acctSec='';
   try{history.pushState({mareasTab:tab},'','#'+encodeURIComponent(tab));}catch(e){}
   render();
 }
 function goBack(fallback){
   var prev=navStack.pop();
-  if(ui.tab==='set'&&prev==='more'&&navStack.length)prev=navStack.pop();
   if(prev){ui.tab=prev;try{history.replaceState({mareasTab:prev},'','#'+encodeURIComponent(prev));}catch(e){}render();return true;}
   if(ui.tab!=='more'){ui.tab=fallback||'more';try{history.replaceState({mareasTab:ui.tab},'','#'+encodeURIComponent(ui.tab));}catch(e){}render();return true;}
   return false;
@@ -3789,7 +4349,7 @@ function backBar(title,to){return '<div class="bar2"><button class="iconbtn" dat
 function entryHtml(e){
   var chips=e.acts.map(actById).filter(Boolean).map(function(a){return '<span class="chip">'+ic(a.icon,14)+esc(a.name)+'</span>';}).join('');
   chips+=linkChips(e)+scaleChips(e);
-  return '<button class="card entry" data-a="prev" data-v="'+esc(e.id)+'"><div>'+face(e.mood,44)+'</div><div style="min-width:0"><div class="row between"><span class="name">'+MOODS[e.mood].n+'</span><span class="when">'+esc(F_TIME.format(new Date(e.ts)))+'</span></div>'+(chips?'<div class="chips">'+chips+'</div>':'')+(e.title?'<p class="note" style="font-weight:600">'+esc(e.title)+'</p>':'')+(e.note?'<p class="note">'+esc(e.note)+'</p>':'')+stripHtml(e)+'</div></button>';
+  return '<button class="card entry" data-a="prev" data-v="'+esc(e.id)+'"><div>'+face(e.mood,44)+'</div><div style="min-width:0"><div class="row between"><span class="name">'+MOODS[e.mood].n+'</span><span class="when">'+esc(F_TIME.format(new Date(e.ts)))+'</span></div>'+(chips?'<div class="chips">'+chips+'</div>':'')+(e.title?'<p class="note" style="font-weight:600">'+esc(e.title)+'</p>':'')+(e.quote?'<p class="note" style="font-style:italic">«'+esc(e.quote)+'»</p>':'')+(e.note?'<p class="note">'+esc(e.note)+'</p>':'')+stripHtml(e)+'</div></button>';
 }
 /* goals + reminder */
 function periodStart(per){var n=new Date();return per==='week'?mondayOf(n).getTime():new Date(n.getFullYear(),n.getMonth(),1).getTime();}
@@ -3835,7 +4395,7 @@ function vLog(){
 function filtered(){
   var q=(ui.fq||'').trim().toLowerCase();
   return sorted().filter(function(e){
-    return (!ui.fx||(e.m&&e.m.length))&&(!ui.fm.length||ui.fm.indexOf(e.mood)>-1)&&(!ui.fa||e.acts.indexOf(ui.fa)>-1)&&(!ui.fp||(e.pp||[]).indexOf(ui.fp)>-1)&&(!q||((e.title||'')+' '+(e.note||'')).toLowerCase().indexOf(q)>-1);
+    return (!ui.fx||(e.m&&e.m.length))&&(!ui.fm.length||ui.fm.indexOf(e.mood)>-1)&&(!ui.fa||e.acts.indexOf(ui.fa)>-1)&&(!ui.fp||(e.pp||[]).indexOf(ui.fp)>-1)&&(!q||((e.title||'')+' '+(e.quote||'')+' '+matchText(e)+' '+(e.note||'')).toLowerCase().indexOf(q)>-1);
   });
 }
 function filtersOn(){return !!((ui.fq||'').trim()||ui.fm.length||ui.fa||ui.fp||ui.fx);}
@@ -3867,15 +4427,15 @@ function vYear(avg){
   var h=header()+calSeg();
   h+='<div class="cal-head"><button class="iconbtn" data-a="yearPrev" aria-label="Año anterior">'+ic('left')+'</button><div class="month">'+y+'</div><button class="iconbtn" data-a="yearNext" aria-label="Año siguiente">'+ic('right')+'</button></div>';
   h+='<div class="card kpis"><div class="kpi"><b>'+cnt+'</b><span>Entradas</span></div><div class="kpi"><b>'+days+'</b><span>Días con registro</span></div><div class="kpi"><b>'+(cnt?num(sum/cnt):'–')+'</b><span>Ánimo medio</span></div></div>';
-  var F_N=new Intl.DateTimeFormat('es',{month:'narrow'});
+  var F_N=new Intl.DateTimeFormat('es',{month:'narrow'}),offY=freeSet(y);
   h+='<div class="card stack"><div class="ygrid" role="group" aria-label="Año '+y+' día a día"><span></span>';
   for(var m=0;m<12;m++)h+='<span class="yl">'+esc(F_N.format(new Date(y,m,1)).toUpperCase())+'</span>';
   for(var d=1;d<=31;d++){
     h+='<span class="yl">'+d+'</span>';
     for(var mo=0;mo<12;mo++){
       if(d>new Date(y,mo+1,0).getDate()){h+='<i class="nx"></i>';continue;}
-      var k=y+'-'+pad(mo+1)+'-'+pad(d),a=avg[k];
-      h+='<button data-a="yearDay" data-v="'+k+'"'+(a?' style="background:var(--m'+Math.round(a)+')"':'')+(k===todayK?' class="now"':'')+' aria-label="'+d+'/'+(mo+1)+(a?', ánimo medio '+num(a):', sin registro')+'"></button>';
+      var k=y+'-'+pad(mo+1)+'-'+pad(d),a=avg[k],cl=(k===todayK?'now':'')+(offY[k]?(k===todayK?' ':'')+'off':'');
+      h+='<button data-a="yearDay" data-v="'+k+'"'+(a?' style="background:var(--m'+Math.round(a)+')"':'')+(cl?' class="'+cl+'"':'')+' aria-label="'+d+'/'+(mo+1)+(a?', ánimo medio '+num(a):', sin registro')+(offY[k]?', día libre':'')+'"></button>';
     }
   }
   h+='</div><div class="legend">'+[1,2,3,4,5].map(function(v){return '<span class="row" style="gap:5px"><i style="background:var(--m'+v+');width:14px;height:14px;border-radius:5px;display:inline-block"></i>'+MOODS[v].n+'</span>';}).join('')+'</div></div>';
@@ -3887,7 +4447,7 @@ function calSeg(){
 function vCal(){
   var avg=dayAvg(),cnts={};S.entries.forEach(function(e){var kk=dkey(e.ts);cnts[kk]=(cnts[kk]||0)+1;});
   if(ui.calMode==='year')return vYear(avg);
-  var evMap=evByDay(),dm=dyMonth(ui.calY,ui.calM);
+  var evMap=evByDay(),dm=dyMonth(ui.calY,ui.calM),offS=freeSet(ui.calY);
   var y=ui.calY,mo=ui.calM,first=new Date(y,mo,1),off=(first.getDay()+6)%7,days=new Date(y,mo+1,0).getDate();
   var todayK=dkey(Date.now()),now=Date.now();
   var h=header()+calSeg();
@@ -3902,16 +4462,18 @@ function vCal(){
     if(k===todayK)cls+=' now';
     if(k===ui.calSel)cls+=' sel';
     if(new Date(y,mo,d).getTime()>now)cls+=' fut';
-    h+='<button class="'+cls+'"'+st+' data-a="calSel" data-v="'+k+'" aria-label="'+d+(a?', ánimo medio '+num(a):'')+(evMap[k]?', '+evMap[k].length+(evMap[k].length===1?' pendiente':' pendientes'):'')+(dm[k]?', '+dm[k].length+(dm[k].length===1?' día importante':' días importantes'):'')+'">'+d+(cnts[k]>1?'<small class="bdg">'+cnts[k]+'</small>':'')+dotsHtml((evMap[k]||[]).concat((dm[k]||[]).map(function(){return {type:'day'};})))+'</button>';
+    if(offS[k])cls+=' off';
+    h+='<button class="'+cls+'"'+st+' data-a="calSel" data-v="'+k+'" aria-label="'+d+(a?', ánimo medio '+num(a):'')+(evMap[k]?', '+evMap[k].length+(evMap[k].length===1?' pendiente':' pendientes'):'')+(dm[k]?', '+dm[k].length+(dm[k].length===1?' día importante':' días importantes'):'')+(offS[k]?', día libre':'')+'">'+d+(cnts[k]>1?'<small class="bdg">'+cnts[k]+'</small>':'')+dotsHtml((evMap[k]||[]).concat((dm[k]||[]).map(function(){return {type:'day'};})))+'</button>';
   }
   h+='</div><div class="legend">'+[1,2,3,4,5].map(function(v){return '<span class="row" style="gap:5px"><i style="background:var(--m'+v+')"></i>'+MOODS[v].n+'</span>';}).join('')+'</div></div>';
-  h+='<div class="legend">'+Object.keys(EVT).map(function(k){return '<span class="row" style="gap:5px"><span class="dot" style="background:'+EVC[k]+'"></span>'+EVT[k].n+'</span>';}).join('')+'<span class="row" style="gap:5px"><span class="dot" style="background:'+EVC.day+'"></span>Día importante</span></div>';
+  h+='<div class="legend">'+Object.keys(EVT).map(function(k){return '<span class="row" style="gap:5px"><span class="dot" style="background:'+EVC[k]+'"></span>'+EVT[k].n+'</span>';}).join('')+'<span class="row" style="gap:5px"><span class="dot" style="background:'+EVC.day+'"></span>Día importante</span><span class="row" style="gap:5px"><span class="dot offdot"></span>Día libre</span></div>';
   var sel=sorted().filter(function(e){return dkey(e.ts)===ui.calSel;}).sort(function(a,b){return a.ts-b.ts;});
   h+='<section class="day"><div class="row between" style="flex-wrap:wrap;gap:8px"><h3>'+esc(dayLabel(ui.calSel))+'</h3><span class="row" style="gap:6px"><button class="btn sm ghost" data-a="newOn" data-v="'+ui.calSel+'">'+ic('plus',16)+'Ánimo</button><button class="btn sm ghost" data-a="newEv" data-v="'+ui.calSel+'">'+ic('plus',16)+'Evento</button><button class="btn sm ghost" data-a="newDay" data-v="'+ui.calSel+'">'+ic('plus',16)+'Día</button></span></div>';
   var dcl=dayClasses(ui.calSel),dev=S.events.filter(function(x){return x.date===ui.calSel;}).sort(evSort),ddy=dyDay(ui.calSel);
-  h+=dcl.map(function(c){return clsRow(c,0);}).join('')+dev.map(function(x){return evRow(x,false);}).join('')+ddy;
+  var dfr=freeOn(ui.calSel);
+  h+=(dfr.length?freeBanner(dfr,ui.calSel):'')+dcl.map(function(c){return clsRow(c,0);}).join('')+dev.map(function(x){return evRow(x,false);}).join('')+ddy;
   h+=sel.map(entryHtml).join('');
-  if(!sel.length&&!dcl.length&&!dev.length&&!ddy)h+='<div class="empty" style="padding:16px">Sin nada este día.</div>';
+  if(!sel.length&&!dcl.length&&!dev.length&&!ddy&&!dfr.length)h+='<div class="empty" style="padding:16px">Sin nada este día.</div>';
   h+='</section>';
   return h;
 }
@@ -4007,17 +4569,18 @@ function vStats(){
 /* settings */
 function toCSV(){
   var q=function(s){return '"'+String(s).replace(/"/g,'""')+'"';};
-  var rows=['fecha,hora,animo,actividades,escalas,titulo,nota'];
+  var rows=['fecha,hora,animo,actividades,escalas,titulo,frase_del_dia,partido,nota'];
   sorted().slice().reverse().forEach(function(e){var d=new Date(e.ts);
-    rows.push([d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),pad(d.getHours())+':'+pad(d.getMinutes()),e.mood,q(e.acts.map(actById).filter(Boolean).map(function(a){return a.name;}).join(' | ')),q(scalesText(e)),q(e.title||''),q(e.note||'')].join(','));});
+    rows.push([d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),pad(d.getHours())+':'+pad(d.getMinutes()),e.mood,q(e.acts.map(actById).filter(Boolean).map(function(a){return a.name;}).join(' | ')),q(scalesText(e)),q(e.title||''),q(e.quote||''),q(matchText(e)),q(e.note||'')].join(','));});
   return rows.join('\n');
 }
 function sgOpen(i){return ui.sgo&&ui.sgo[i]?' open':'';}
 function vSet(){
   var h=backBar('Ajustes','more');
+  h+=menuRow('acct','users','Cuenta de Mareas','Perfil, estadísticas, datos y privacidad');
   h+='<details class="settings-group" data-g="0"'+sgOpen(0)+'><summary>Apariencia y tema</summary><div class="settings-group-body">';
   h+=packCard();
-  h+=cloudCard()+mcpCard();
+  h+=tourCard()+cloudCard();
   h+=appearanceCard();
   h+='</div></details><details class="settings-group" data-g="1"'+sgOpen(1)+'><summary>Actividades y categorías</summary><div class="settings-group-body">';
   var totalActs=S.acts.length;
@@ -4062,13 +4625,15 @@ function vSet(){
     '<h3>Importar desde Daylio</h3><p class="muted small" style="margin:0">En Daylio, exporta tus entradas como CSV y elige ese archivo aquí. Se lee en tu dispositivo y no se envía a ningún sitio. Si ya hay entradas de ejemplo, se quitan al importar.</p><div class="row" style="flex-wrap:wrap"><label class="btn sm" for="dyFile">Elegir CSV de Daylio</label><input id="dyFile" type="file" accept=".csv,text/csv,text/plain" hidden></div><textarea id="dyArea" class="field" placeholder="O pega aquí el contenido del CSV"></textarea><div><button class="btn sm ghost" data-a="impDy">Importar texto pegado</button></div><div class="msg" id="dyMsg" role="status">'+esc(ui.dyMsg)+'</div></section>';
   h+=zipCard();
   h+='<section class="card stack"><h3>Borrar todo</h3><p class="muted small" style="margin:0">Elimina entradas y actividades personalizadas de este navegador.</p><button class="btn danger" data-a="wipe">'+(ui.wipe?'Pulsa otra vez para borrar todo':'Borrar todos los datos')+'</button></section>';
+  h+='</div></details><details class="settings-group" data-g="5"'+sgOpen(5)+'><summary>Desarrollador</summary><div class="settings-group-body">';
+  h+='<p class="muted small" style="margin:0">Herramientas para conectar Mareas con otras aplicaciones.</p>'+mcpCard();
   return h+'</div></details>';
 }
 
 function render(keepScroll){
   var y=$view.scrollTop;
   renderTabs();
-  $view.innerHTML=ui.tab==='log'?vLog():ui.tab==='cal'?vCal():ui.tab==='stats'?vStats():ui.tab==='home'?vHome():ui.tab==='agenda'?vAgenda():ui.tab==='sched'?vSched():ui.tab==='more'?vMore():ui.tab==='subj'?vSubj():ui.tab==='teach'?vTeach():ui.tab==='abs'?vAbs():ui.tab==='pomo'?vPomo():ui.tab==='stress'?vStress():ui.tab==='grades'?vGrades():ui.tab==='photos'?vPhotos():ui.tab==='mood'?vMood():ui.tab==='days'?vDays():ui.tab==='graph'?vGraph():ui.tab==='people'?vPeople():ui.tab==='person'?vPerson():vSet();
+  $view.innerHTML=ui.tab==='log'?vLog():ui.tab==='cal'?vCal():ui.tab==='stats'?vStats():ui.tab==='home'?vHome():ui.tab==='agenda'?vAgenda():ui.tab==='sched'?vSched():ui.tab==='more'?vMore():ui.tab==='subj'?vSubj():ui.tab==='teach'?vTeach():ui.tab==='abs'?vAbs():ui.tab==='pomo'?vPomo():ui.tab==='stress'?vStress():ui.tab==='grades'?vGrades():ui.tab==='photos'?vPhotos():ui.tab==='mood'?vMood():ui.tab==='days'?vDays():ui.tab==='free'?vFree():ui.tab==='periods'?vPeriods():ui.tab==='holidays'?vHolidays():ui.tab==='recap'?vRecap():ui.tab==='graph'?vGraph():ui.tab==='acct'?vAcct():ui.tab==='people'?vPeople():ui.tab==='person'?vPerson():vSet();
   $view.scrollTop=keepScroll?y:0;
   $view.setAttribute('data-tab',ui.tab);
   $view.classList.toggle('enter',!keepScroll);
@@ -4081,7 +4646,8 @@ function render(keepScroll){
 /* ---------- editor sheet ---------- */
 function openEditor(opts){
   var e=opts.entry;
-  ed=e?{id:e.id,ts:e.ts,mood:e.mood,acts:e.acts.slice(),note:e.note||'',title:e.title||'',sc:Object.assign({},e.sc||{}),pp:(e.pp||[]).slice(),sub:(e.sub||[]).slice(),sl:Object.assign({},e.sl||{}),ex:e.ex,m:(e.m||[]).map(function(x){return {id:x.id,k:x.k};}),newM:[],origM:(e.m||[]).map(function(x){return x.id;})}:{id:null,ts:opts.ts||Date.now(),mood:opts.mood||0,acts:[],note:'',title:'',sc:{},pp:[],sub:[],sl:{},ex:false,m:[],newM:[],origM:[]};
+  var priorAuto=e&&e.autoAct?(Array.isArray(e.autoAct)?e.autoAct:[e.autoAct]):[];
+  ed=e?{id:e.id,ts:e.ts,mood:e.mood,acts:e.acts.filter(function(id){return priorAuto.indexOf(id)<0;}),autoAct:priorAuto,note:e.note||'',title:e.title||'',quote:e.quote||'',match:e.match?Object.assign({},e.match):{},sc:Object.assign({},e.sc||{}),pp:(e.pp||[]).slice(),sub:(e.sub||[]).slice(),sl:Object.assign({},e.sl||{}),ex:e.ex,m:(e.m||[]).map(function(x){return {id:x.id,k:x.k};}),newM:[],origM:(e.m||[]).map(function(x){return x.id;})}:{id:null,ts:opts.ts||Date.now(),mood:opts.mood||0,acts:Array.isArray(opts.acts)?opts.acts.slice():[],autoAct:[],note:'',title:'',quote:'',match:{},sc:{},pp:[],sub:[],sl:{},ex:false,m:[],newM:[],origM:[]};
   ed.confirmDel=false;
   renderSheet();$sheet.classList.add('open');
   try{lastFocus=document.activeElement;var f=$sheet.querySelector('[data-a="close"]');if(f)f.focus({preventScroll:true});}catch(e0){}
@@ -4096,6 +4662,7 @@ function renderSheet(){
   '<div class="stack"><h3>Qué has hecho</h3>'+actsByCat().filter(function(g){return g.acts.length;}).map(function(g){return '<div class="stack" style="gap:8px"><div class="cathead">'+esc(g.cat.name)+'</div><div class="acts">'+g.acts.map(function(a){return '<button class="act'+(ed.acts.indexOf(a.id)>-1?' on':'')+'" data-a="act" data-v="'+esc(a.id)+'" aria-pressed="'+(ed.acts.indexOf(a.id)>-1)+'">'+ic(a.icon,26)+'<span>'+esc(a.name)+'</span></button>';}).join('')+'</div></div>';}).join('')+'</div>'+
   '<div id="advBox" class="stack" style="gap:18px">'+advHtml()+'</div>'+scalesEditor()+mSection()+
   '<div class="stack"><h3>Título</h3><input id="edTitle" class="field" maxlength="120" value="'+esc(ed.title)+'" placeholder="Opcional" autocomplete="off"></div>'+
+  '<div class="stack"><h3>Frase del día</h3><textarea id="edQuote" class="field" rows="2" maxlength="5000" placeholder="Escribe una frase para recordar (máximo 100 palabras)">'+esc(ed.quote)+'</textarea><span class="small muted">Máximo 100 palabras.</span></div>'+
   '<div class="stack"><h3>Nota</h3><textarea id="edNote" class="field" rows="3" maxlength="20000" placeholder="¿Algo que quieras recordar de este momento?">'+esc(ed.note)+'</textarea></div>'+
   '<div id="edErr" class="small" style="color:var(--danger)" role="alert"></div>'+
   '<div class="row" style="flex-wrap:wrap"><button class="btn" style="flex:1" data-a="saveEntry">Guardar</button>'+(ed.id?'<button class="btn danger" data-a="delEntry" id="delBtn">Eliminar</button>':'')+'</div></div>';
@@ -4112,11 +4679,17 @@ function saveEntry(){
   if(!ed.mood){err.textContent='Elige cómo te sientes para guardar.';return;}
   var ts=readDateTime();
   if(ts===null){err.textContent='Revisa la fecha y la hora.';return;}
-  var note=document.getElementById('edNote').value.trim(),title=document.getElementById('edTitle').value.trim(),hasSc=Object.keys(ed.sc||{}).length>0;
+  var note=document.getElementById('edNote').value.trim(),title=document.getElementById('edTitle').value.trim(),quote=document.getElementById('edQuote').value.trim(),hasSc=Object.keys(ed.sc||{}).length>0;
+  var match=ed.match||{};
+  if(!ed.acts.some(function(id){var a=actById(id);return a&&a.football;}))match={};
+  ['home','away','result','competition'].forEach(function(k){match[k]=String(match[k]||'').trim().slice(0,k==='result'?20:60);});
+  var hasMatch=Object.keys(match).some(function(k){return !!match[k];});
+  var entryActs=ed.acts.slice(),freeActs=dayoffActsFor(dkey(ts)),addedFreeActs=[];freeActs.forEach(function(id){if(entryActs.indexOf(id)<0){entryActs.push(id);addedFreeActs.push(id);}});
+  if(quote.split(/\s+/).filter(Boolean).length>100){err.textContent='La frase del día no puede superar las 100 palabras.';return;}
   if(ed.id){
-    S.entries.forEach(function(e){if(e.id===ed.id){e.ts=ts;e.mood=ed.mood;e.acts=ed.acts.slice();e.note=note;e.title=title;if(hasSc)e.sc=Object.assign({},ed.sc);else delete e.sc;}});
+    S.entries.forEach(function(e){if(e.id===ed.id){e.ts=ts;e.mood=ed.mood;e.acts=entryActs;if(addedFreeActs.length)e.autoAct=addedFreeActs;else delete e.autoAct;e.note=note;e.title=title;if(quote)e.quote=quote;else delete e.quote;if(hasMatch)e.match=Object.assign({},match);else delete e.match;if(hasSc)e.sc=Object.assign({},ed.sc);else delete e.sc;}});
   }else{
-    S.entries.push({id:'e'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),ts:ts,mood:ed.mood,acts:ed.acts.slice(),note:note,title:title}); if(hasSc)S.entries[S.entries.length-1].sc=Object.assign({},ed.sc);
+    S.entries.push({id:'e'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),ts:ts,mood:ed.mood,acts:entryActs,note:note,title:title,quote:quote});if(addedFreeActs.length)S.entries[S.entries.length-1].autoAct=addedFreeActs;if(hasMatch)S.entries[S.entries.length-1].match=Object.assign({},match); if(hasSc)S.entries[S.entries.length-1].sc=Object.assign({},ed.sc);
     ui.calSel=dkey(ts);var dd=new Date(ts);ui.calY=dd.getFullYear();ui.calM=dd.getMonth();
   }
   var tg=ed.id?S.entries.filter(function(x){return x.id===ed.id;})[0]:S.entries[S.entries.length-1];
@@ -4140,7 +4713,7 @@ function doImportObj(o){
   var add=0,fresh=S.entries.every(function(e){return e.ex;});
   (o.goals||[]).forEach(function(g){if(g&&g.id&&(g.per==='week'||g.per==='month')&&g.n>=1&&!S.goals.some(function(x){return x.id===g.id;}))S.goals.push({id:String(g.id),act:String(g.act||'any'),n:Math.min(31,Math.round(g.n)),per:g.per});});
   (o.cats||[]).forEach(function(c){if(c&&c.id&&c.name&&!S.cats.some(function(x){return x.id===c.id;}))S.cats.push({id:String(c.id),name:String(c.name).slice(0,24)});});
-  (o.acts||[]).forEach(function(a){if(!a||!a.id||!a.name)return;var x=actById(a.id);if(!x){x={id:String(a.id),name:String(a.name).slice(0,24),icon:ICONS[a.icon]?a.icon:'heart',cat:S.cats.some(function(c){return c.id===a.cat;})?a.cat:'otras'};S.acts.push(x);}if(a.conn&&!x.conn)x.conn=true;if(a.sleep&&!x.sleep)x.sleep=true;if((a.stress===1||a.stress===-1)&&!x.stress)x.stress=a.stress;touch();});
+  (o.acts||[]).forEach(function(a){if(!a||!a.id||!a.name)return;var x=actById(a.id);if(!x){x={id:String(a.id),name:String(a.name).slice(0,24),icon:ICONS[a.icon]?a.icon:'heart',cat:S.cats.some(function(c){return c.id===a.cat;})?a.cat:'otras'};S.acts.push(x);}if(a.conn&&!x.conn)x.conn=true;if(a.football&&!x.football)x.football=true;if(a.sleep&&!x.sleep)x.sleep=true;if((a.stress===1||a.stress===-1)&&!x.stress)x.stress=a.stress;touch();});
   (o.acts||[]).forEach(function(a){var x=a&&a.id?actById(String(a.id)):null;if(x&&a.conn)x.conn=true;});
   var gmap={};
   (o.pgroups||[]).forEach(function(g){if(!g||!g.id||!g.name)return;var gid=String(g.id),gn=String(g.name).slice(0,30),gx=S.pgroups.filter(function(x){return x.id===gid||plain(x.name)===plain(gn);})[0];if(!gx){gx={id:gid,name:gn};S.pgroups.push(gx);}gmap[gid]=gx.id;});
@@ -4149,8 +4722,12 @@ function doImportObj(o){
   (o.days||[]).forEach(function(x){if(x&&x.id&&x.name&&validD(x.date)&&!dayById(String(x.id)))S.days.push(dayClean(x));});
   (o.subs||[]).forEach(function(s){if(s&&s.id&&s.name&&s.parent&&!subById(String(s.id)))S.subs.push({id:String(s.id),parent:String(s.parent),name:String(s.name).slice(0,24),icon:ICONS[s.icon]?s.icon:'star'});});
   (o.teachers||[]).forEach(function(t){if(t&&t.id&&t.name&&!teachById(String(t.id)))S.teachers.push({id:String(t.id),name:String(t.name).slice(0,60),email:String(t.email||'').slice(0,120),phone:String(t.phone||'').slice(0,30),office:String(t.office||'').slice(0,30),note:String(t.note||'').slice(0,2000)});});
-  (o.subjects||[]).forEach(function(x){if(x&&x.id&&x.name&&!subjById(String(x.id)))S.subjects.push({id:String(x.id),name:String(x.name).slice(0,60),color:SW.indexOf(x.color)>-1?x.color:SW[5],icon:ICONS[x.icon]?x.icon:'book',teacher:x.teacher&&teachById(String(x.teacher))?String(x.teacher):'',room:String(x.room||'').slice(0,30),total:Math.max(0,Math.min(999,Math.round(+x.total)||0)),maxPct:Math.max(0,Math.min(100,Math.round(+x.maxPct)||0)),diff:['e','m','h'].indexOf(x.diff)>-1?x.diff:'',goal:Math.max(0,Math.min(10,+x.goal||0)),rem:Math.max(1,Math.min(30,Math.round(+x.rem)||1)),note:String(x.note||'').slice(0,2000)});});
-  (o.grades||[]).forEach(function(g){if(g&&g.id&&subjById(String(g.sid))&&typeof g.score==='number'&&g.score>=0&&g.score<=10&&/^\d{4}-\d\d-\d\d$/.test(g.date)&&!GR().some(function(y){return y.id===String(g.id);}))GR().push({id:String(g.id),sid:String(g.sid),name:String(g.name||'').slice(0,60),type:GTYPES[g.type]?g.type:'other',score:Math.round(g.score*100)/100,date:g.date});});
+  (o.subjects||[]).forEach(function(x){if(!x||!x.id||!x.name||subjById(String(x.id)))return;var ns={id:String(x.id),name:String(x.name).slice(0,60),color:SW.indexOf(x.color)>-1?x.color:SW[5],icon:ICONS[x.icon]?x.icon:'book',teacher:x.teacher&&teachById(String(x.teacher))?String(x.teacher):'',room:String(x.room||'').slice(0,30),total:Math.max(0,Math.min(999,Math.round(+x.total)||0)),maxPct:Math.max(0,Math.min(100,Math.round(+x.maxPct)||0)),diff:['e','m','h'].indexOf(x.diff)>-1?x.diff:'',goal:Math.max(0,Math.min(10,+x.goal||0)),rem:Math.max(1,Math.min(30,Math.round(+x.rem)||1)),note:String(x.note||'').slice(0,2000)};if(['mean','percentage','criteria'].indexOf(x.gradeMode)>-1)ns.gradeMode=x.gradeMode;if(Array.isArray(x.periods))ns.periods=x.periods.filter(function(p){return p&&p.id&&p.name&&/^\d{4}-\d\d-\d\d$/.test(p.start)&&/^\d{4}-\d\d-\d\d$/.test(p.end)&&p.end>=p.start;}).map(function(p){return {id:String(p.id),name:String(p.name).slice(0,40),start:p.start,end:p.end};});if(Array.isArray(x.criteria))ns.criteria=x.criteria.filter(function(c){return c&&c.id&&c.name;}).map(function(c){return {id:String(c.id),name:String(c.name).slice(0,40)};});S.subjects.push(ns);});
+  var importTermMap={};
+  if(!Array.isArray(S.gradePeriods))gradePeriods(S.subjects[0]||null);
+  (o.gradePeriods||[]).forEach(function(p){if(!p||!p.id||!p.name||!validD(p.start)||!validD(p.end)||p.end<p.start)return;var sid=p.legacy?String(p.sid||''):'';if(p.legacy&&!subjById(sid))return;var dst=p.legacy?S.gradePeriods.filter(function(x){return x.legacy&&x.sid===sid&&x.start===p.start&&x.end===p.end;})[0]:S.gradePeriods.filter(function(x){return !x.legacy&&x.start===p.start&&x.end===p.end;})[0];if(!dst){dst={id:S.gradePeriods.some(function(x){return x.id===String(p.id);})?nid('tm'):String(p.id),name:String(p.name).slice(0,40),start:p.start,end:p.end};if(p.legacy){dst.legacy=true;dst.sid=sid;}S.gradePeriods.push(dst);}importTermMap[p.id]=dst.id;});
+  (o.subjects||[]).forEach(function(src){if(!src||!src.id||!Array.isArray(src.periods))return;var sid=String(src.id);importTermMap[sid]=importTermMap[sid]||{};src.periods.forEach(function(p){if(!p||!p.id||!validD(p.start)||!validD(p.end)||p.end<p.start)return;var dst=S.gradePeriods.filter(function(x){return !x.legacy&&x.start===p.start&&x.end===p.end;})[0];if(!dst){dst={id:S.gradePeriods.some(function(x){return x.id===String(p.id);})?nid('tm'):String(p.id),name:String(p.name||'Periodo').slice(0,40),start:p.start,end:p.end};S.gradePeriods.push(dst);}importTermMap[sid][p.id]=dst.id;});});
+  (o.grades||[]).forEach(function(g){if(!g||!g.id||!subjById(String(g.sid))||typeof g.score!=='number'||g.score<0||g.score>10||!/^\d{4}-\d\d-\d\d$/.test(g.date)||GR().some(function(y){return y.id===String(g.id);}))return;var ng={id:String(g.id),sid:String(g.sid),name:String(g.name||'').slice(0,60),type:GTYPES[g.type]?g.type:'other',score:Math.round(g.score*100)/100,date:g.date};if(g.term)ng.term=importTermMap[String(g.sid)]&&importTermMap[String(g.sid)][g.term]||importTermMap[g.term]||String(g.term);if(+g.weight>0&&+g.weight<=100)ng.weight=+g.weight;if(Array.isArray(g.criteria))ng.criteria=g.criteria.map(String);GR().push(ng);});
   var hadSes=S.sessions.length>0;
   (o.sessions||[]).forEach(function(x){if(x&&x.id&&typeof x.ts==='number'&&x.min>0&&!S.sessions.some(function(y){return y.id===String(x.id);}))S.sessions.push({id:String(x.id),sid:subjById(String(x.sid))?String(x.sid):'',ts:x.ts,min:Math.min(180,Math.round(x.min))});});
   if(o.pomo&&typeof o.pomo==='object'&&!hadSes){S.pomo=Object.assign({},S.pomo,o.pomo);pomoEnsure();}
@@ -4161,7 +4738,7 @@ function doImportObj(o){
   (o.events||[]).forEach(function(x){if(x&&x.id&&x.title&&/^\d{4}-\d\d-\d\d$/.test(x.date)&&!S.events.some(function(y){return y.id===String(x.id);}))S.events.push(evClean(x));});
   (o.absences||[]).forEach(function(x){if(x&&x.id&&subjById(String(x.sid))&&/^\d{4}-\d\d-\d\d$/.test(x.date)&&!S.absences.some(function(y){return y.id===String(x.id);}))S.absences.push({id:String(x.id),sid:String(x.sid),date:x.date,type:x.type==='r'?'r':'f',just:!!x.just,note:String(x.note||'').slice(0,500)});});
   if(o.absJust===true&&fresh)S.absJust=true;
-  if(o.sched&&typeof o.sched==='object'&&!hadCls)S.sched={ab:!!o.sched.ab,days:[5,6,7].indexOf(o.sched.days)>-1?o.sched.days:5,ref:+o.sched.ref||Date.now()};
+  if(o.sched&&typeof o.sched==='object'&&!hadCls){S.sched={ab:!!o.sched.ab,days:[5,6,7].indexOf(o.sched.days)>-1?o.sched.days:5,ref:+o.sched.ref||Date.now()};if(validD(o.sched.schoolStart))S.sched.schoolStart=o.sched.schoolStart;}
   (o.scales||[]).forEach(function(c){
     if(c&&c.id&&c.name&&Array.isArray(c.lv)){
       var cid=String(c.id).replace(/[^\w-]/g,'_');
@@ -4171,6 +4748,12 @@ function doImportObj(o){
   o.entries.forEach(function(e){
     if(e&&typeof e.ts==='number'&&e.mood>=1&&e.mood<=5&&!ids[e.id]){
       var ne={id:String(e.id||('i'+Date.now()+add)),ts:e.ts,mood:Math.round(e.mood),acts:Array.isArray(e.acts)?e.acts.map(String):[],note:String(e.note||'').slice(0,20000),title:String(e.title||'').slice(0,120)};
+      var autos=Array.isArray(e.autoAct)?e.autoAct:(e.autoAct?[e.autoAct]:[]);autos=autos.map(String).filter(function(id){return actById(id)&&ne.acts.indexOf(id)>-1;});if(autos.length)ne.autoAct=autos;
+      if(typeof e.quote==='string'&&e.quote.trim().split(/\s+/).filter(Boolean).length<=100)ne.quote=e.quote.trim().slice(0,5000);
+      if(e.match&&typeof e.match==='object'){
+        var em={home:String(e.match.home||'').slice(0,60),away:String(e.match.away||'').slice(0,60),result:String(e.match.result||'').slice(0,20),competition:String(e.match.competition||'').slice(0,60)};
+        if(Object.keys(em).some(function(k){return !!em[k];}))ne.match=em;
+      }
       if(e.scales)ne.scales=String(e.scales).slice(0,200);
       if(Array.isArray(e.pp)){var pq=e.pp.map(String).slice(0,30);if(pq.length)ne.pp=pq;}
       if(Array.isArray(e.sub)){var sq=e.sub.map(String).slice(0,30);if(sq.length)ne.sub=sq;}
@@ -4185,6 +4768,7 @@ function doImportObj(o){
   if(Array.isArray(o.trustNames)&&(fresh||!S.trustNames))S.trustNames=[0,1,2,3,4].map(function(i){return String(o.trustNames[i]||TRDEF[i]).slice(0,16);});
   if(PALETTES[o.palette]&&(fresh||!S.palette||S.palette==='marea'))S.palette=o.palette;
   if(fresh&&SKINS.some(function(k){return k[0]===o.skin;}))S.skin=o.skin;
+  if(fresh&&o.profile)S.profile=cleanProfile(o.profile);
   if(o.reminder&&typeof o.reminder==='object'&&/^\d\d:\d\d$/.test(o.reminder.time)&&(fresh||!S.reminder.on))S.reminder={on:!!o.reminder.on,time:o.reminder.time};
   faceCache={};applySkin();applyPalette();
   normalize();save();ui.msg='Importadas '+add+' entradas.';ui.pm=Array.isArray(o.media)?o.media:null;return true;
@@ -4317,6 +4901,12 @@ document.addEventListener('click',function(ev){
     case 'tab':goTab(v);break;
     case 'sbTog':ui.sbc=!ui.sbc;try{localStorage.setItem('mareas.sb',ui.sbc?'1':'0');}catch(e){}renderTabs();break;
     case 'back':goBack(v);break;
+    case 'holidayLoad':holidayLoad();break;
+    case 'holidayImport':holidayImport();break;
+    case 'recapPrev':ui.recapSlide=Math.max(0,(ui.recapSlide||0)-1);render(true);break;
+    case 'recapNext':ui.recapSlide=Math.min(recapSlides(ui.recapYear||new Date().getFullYear()).length-1,(ui.recapSlide||0)+1);render(true);break;
+    case 'recapShare':shareRecap();break;
+    case 'recapDownload':drawRecapImage();break;
     case 'tidePulse':{var tide=el;if(tide.classList.contains('pulse'))break;tide.classList.add('pulse');setTimeout(function(){tide.classList.remove('pulse');},3200);break;}
     case 'quick':openEditor({mood:+v});break;
     case 'edit':{var e=S.entries.filter(function(x){return x.id===v;})[0];if(e)openEditor({entry:e});break;}
@@ -4350,6 +4940,12 @@ document.addEventListener('click',function(ev){
     case 'cloudNewPass':cloudSetPass();break;
     case 'cloudOut':cloudLogout();break;
     case 'cloudSync':syncNow(false);break;
+    case 'tourStart':tourStart();break;
+    case 'acctSec':ui.acctSec=v||'';render();try{$view.scrollTop=0;}catch(e){}break;
+    case 'acctGo':goTab('acct');ui.acctSec=v||'';render();try{$view.scrollTop=0;}catch(e){}break;
+    case 'acctSave':acctSave();break;
+    case 'acctAvDel':S.profile.av='';save();render(true);break;
+    case 'acctSetData':ui.sgo=ui.sgo||{};ui.sgo[4]=true;goTab('set');break;
     case 'mcpList':mcpLoad();break;
     case 'mcpNew':mcpNew();break;
     case 'mcpHide':if(ui.mcp)ui.mcp.tok='';render(true);break;
@@ -4370,7 +4966,7 @@ document.addEventListener('click',function(ev){
     case 'editAbs':openAbs(v,'');break;
     case 'absType':readAbs();fo.atype=v;renderForm();break;
     case 'absJ':S.absJust=!S.absJust;save();render(true);break;
-    case 'homeDay':{var hp=v.split('-');ui.calY=+hp[0];ui.calM=+hp[1]-1;ui.calSel=v;ui.calMode='month';ui.tab='cal';render();break;}
+    case 'homeDay':{var hp=v.split('-');ui.calY=+hp[0];ui.calM=+hp[1]-1;ui.calSel=v;ui.calMode='month';goTab('cal');break;}
     case 'newEv':openEv(null,v);break;
     case 'editEv':openEv(v,'');break;
     case 'evType':readEv();fo.etype=v;renderForm();break;
@@ -4402,7 +4998,7 @@ document.addEventListener('click',function(ev){
     case 'range':ui.range=+v;render(true);break;
     case 'calMode':ui.calMode=v;render();break;
     case 'quoteNext':ui.qOff=(ui.qOff||0)+1;render(true);break;
-    case 'barGo':{var bd=new Date(+v);ui.calY=bd.getFullYear();ui.calM=bd.getMonth();ui.calSel=dkey(+v);ui.calMode='month';ui.tab='cal';render();break;}
+    case 'barGo':{var bd=new Date(+v);ui.calY=bd.getFullYear();ui.calM=bd.getMonth();ui.calSel=dkey(+v);ui.calMode='month';goTab('cal');break;}
     case 'sfClear':ui.sfA='';ui.sfP='';ui.cmpA='';render(true);break;
     case 'yearPrev':ui.calY--;render(true);break;
     case 'yearNext':ui.calY++;render(true);break;
@@ -4485,7 +5081,7 @@ document.addEventListener('click',function(ev){
       for(var q=1;q<=5;q++){var t2=document.getElementById('mn'+q).value.trim();names.push(t2||DEFN[q]);}
       S.moodNames=names;save();document.getElementById('moodMsg').textContent='Nombres guardados.';break;}
     case 'resetMoods':delete S.moodNames;S.palette='marea';applyPalette();save();render(true);break;
-    case 'exp':ui.expFmt=v;ui.exp=v==='json'?JSON.stringify({v:1,people:S.people,pgroups:S.pgroups,rels:S.rels,days:S.days,subs:S.subs,skin:S.skin,subjects:S.subjects,teachers:S.teachers,classes:S.classes,events:S.events,grades:GR(),absences:S.absences,absJust:!!S.absJust,pomo:S.pomo,sessions:S.sessions,sched:S.sched,scales:S.scales,cats:S.cats,acts:S.acts,entries:S.entries.filter(function(x){return !x.ex;}),goals:S.goals.filter(function(g){return !g.ex;}),reminder:S.reminder,moodNames:S.moodNames,trustNames:S.trustNames,palette:S.palette},null,1):toCSV();render(true);break;
+    case 'exp':ui.expFmt=v;ui.exp=v==='json'?JSON.stringify({v:1,people:S.people,pgroups:S.pgroups,rels:S.rels,days:S.days,subs:S.subs,skin:S.skin,profile:S.profile,subjects:S.subjects,teachers:S.teachers,classes:S.classes,events:S.events,grades:GR(),absences:S.absences,absJust:!!S.absJust,pomo:S.pomo,sessions:S.sessions,sched:S.sched,scales:S.scales,cats:S.cats,acts:S.acts,entries:S.entries.filter(function(x){return !x.ex;}),goals:S.goals.filter(function(g){return !g.ex;}),reminder:S.reminder,moodNames:S.moodNames,trustNames:S.trustNames,palette:S.palette},null,1):toCSV();render(true);break;
     case 'copyExp':{
       var ta=document.getElementById('expArea');ta.select();
       var done=function(ok){el.textContent=ok?'Copiado':'Selecciona el texto y cópialo';};
@@ -4517,7 +5113,7 @@ document.addEventListener('click',function(ev){
       render(true);break;}
     case 'wipe':
       if(!ui.wipe){ui.wipe=true;render(true);}
-      else{mClear();clearInterval(pTimer);pTimer=0;S={v:1,skin:S.skin,acts:defActs(),cats:defCats(),entries:[],goals:[],scales:[],people:[],pgroups:[],rels:[],days:[],subs:[],subjects:[],teachers:[],classes:[],events:[],absences:[],sessions:[],pomo:{},sched:{ab:false,days:5,ref:Date.now()},reminder:{on:false,time:'21:00'}};pomoEnsure();faceCache={};applyPalette();save();ui.wipe=false;document.title='Mareas';ui.exp='';ui.dyMsg='';ui.msg='Datos borrados.';render();}
+      else{mClear();clearInterval(pTimer);pTimer=0;S={v:1,skin:S.skin,profile:S.profile,acts:defActs(),cats:defCats(),entries:[],goals:[],scales:[],people:[],pgroups:[],rels:[],days:[],subs:[],subjects:[],teachers:[],classes:[],events:[],absences:[],sessions:[],pomo:{},sched:{ab:false,days:5,ref:Date.now()},reminder:{on:false,time:'21:00'}};pomoEnsure();faceCache={};applyPalette();save();ui.wipe=false;document.title='Mareas';ui.exp='';ui.dyMsg='';ui.msg='Datos borrados.';render();}
       break;
   }
 });
@@ -4654,6 +5250,8 @@ document.addEventListener('keydown',function(ev){
 
 /* iOS standalone homescreen app: browser Safari keeps its native edge gesture and popstate history. */
 (function(){var standalone=!!navigator.standalone||window.matchMedia('(display-mode: standalone)').matches;if(!standalone)return;var start=null;document.addEventListener('touchstart',function(e){var t=e.touches&&e.touches[0],target=e.target;if(!t||t.clientX>26||target.closest('input,textarea,select,button,a,[role="button"],#gCv'))return;start={x:t.clientX,y:t.clientY};},{passive:true});document.addEventListener('touchend',function(e){if(!start)return;var t=e.changedTouches&&e.changedTouches[0],s=start;start=null;if(t&&t.clientX-s.x>90&&Math.abs(t.clientY-s.y)<55)goBack('more');},{passive:true});document.addEventListener('touchcancel',function(){start=null;},{passive:true});})();
+/* Gesto de vuelta en navegadores: empieza desde el borde izquierdo y evita controles interactivos. */
+(function(){var standalone=!!navigator.standalone||window.matchMedia('(display-mode: standalone)').matches;if(standalone)return;var start=null;document.addEventListener('touchstart',function(e){var t=e.touches&&e.touches[0],target=e.target;if(!t||t.clientX>26||!target.closest('#view')||target.closest('input,textarea,select,button,a,[role="button"],#gCv'))return;start={x:t.clientX,y:t.clientY};},{passive:true});document.addEventListener('touchend',function(e){if(!start)return;var t=e.changedTouches&&e.changedTouches[0],s=start;start=null;if(t&&t.clientX-s.x>90&&Math.abs(t.clientY-s.y)<55)goBack('more');},{passive:true});document.addEventListener('touchcancel',function(){start=null;},{passive:true});})();
 
 setInterval(function(){
   if(!S.reminder||!S.reminder.on||document.hidden)return;
@@ -4682,6 +5280,7 @@ applySkin();
 applyPalette();
 render();
 pBoot();
+tourMaybe();
 })();
 </script>
 

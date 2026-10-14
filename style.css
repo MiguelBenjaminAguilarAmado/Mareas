@@ -27,7 +27,7 @@
 }
 *{box-sizing:border-box}
 html,body{height:100%}
-html{-webkit-tap-highlight-color:transparent}
+html{-webkit-tap-highlight-color:transparent;touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0;touch-action:manipulation}
 input,textarea,select{font:inherit;color:var(--fg)}
@@ -137,7 +137,7 @@ select.field{appearance:auto}
 /* settings */
 .arow-s{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
 .arow-s:last-child{border-bottom:0}
-.field{width:100%;min-height:44px;border-radius:8px;border:1px solid var(--line);background:var(--surface);padding:10px 12px}
+.field{font-size:16px;width:100%;min-height:44px;border-radius:8px;border:1px solid var(--line);background:var(--surface);padding:10px 12px}
 textarea.field{min-height:96px;resize:vertical}
 .ipw{max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:2px;scrollbar-width:thin}
 .iconpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:6px}
@@ -329,8 +329,22 @@ textarea.field{min-height:96px;resize:vertical}
 .cat-hdr:hover{color:var(--fg)}
 .tide-hit{cursor:pointer;transform-origin:center;transition:transform .22s ease,filter .22s ease}
 .tide-hit:active{transform:scale(.96)}
-.past-class{width:42px;min-width:42px;height:42px;padding:4px;opacity:.48;overflow:hidden}
+.past-class{display:flex!important;align-items:center;justify-content:center;width:36px;min-width:36px;height:36px;padding:0!important;gap:0;opacity:.48;overflow:hidden;border-left:0!important}
+.past-class .sbadge{width:100%!important;height:100%!important;border-radius:inherit}
+.past-class .sbadge{padding:0;flex:none;line-height:0}
+.past-class .sbadge svg{display:block;margin:auto}
 .past-class .class-text{display:none}
+.recap-wrap{width:min(100%,360px);margin:4px auto 10px}
+.recap-progress{display:flex;gap:4px;margin-bottom:8px}
+.recap-progress i{height:3px;flex:1;border-radius:4px;background:var(--line)}
+.recap-progress i.on{background:var(--accent)}
+.recap-story{aspect-ratio:9/14;max-height:68vh;border-radius:22px;padding:22px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;color:#fff;background:radial-gradient(circle at 90% 8%,rgba(255,255,255,.25),transparent 28%),linear-gradient(150deg,var(--recap),#17152a 92%);box-shadow:0 14px 38px rgba(0,0,0,.2);position:relative}
+.recap-story::after{content:"";position:absolute;width:250px;height:250px;right:-110px;top:28%;border:1px solid rgba(255,255,255,.2);border-radius:50%;box-shadow:0 0 0 28px rgba(255,255,255,.05),0 0 0 58px rgba(255,255,255,.035)}
+.recap-brand,.recap-count{font-size:13px;font-weight:700;letter-spacing:.04em;z-index:1}
+.recap-copy{display:grid;gap:14px;z-index:1}
+.recap-kicker{text-transform:uppercase;font-size:12px;letter-spacing:.12em;opacity:.8}
+.recap-copy strong{font-size:clamp(38px,11vw,64px);line-height:1.02;overflow-wrap:anywhere}
+.recap-copy p{font-size:17px;line-height:1.4;max-width:260px;margin:0;color:rgba(255,255,255,.84)}
 .settings-group{border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .settings-group>summary{padding:14px 16px;cursor:pointer;font-weight:700;background:var(--surface2)}
 .settings-group[open]>summary{border-bottom:1px solid var(--line)}
@@ -418,7 +432,9 @@ body{transition:background-color .3s ease,color .3s ease}
   :root[data-skin] #tabs .sbtog svg{transition:transform .32s var(--ease)}
   #tabs[data-c="1"]{width:64px!important}
   #tabs[data-c="1"]::before{content:"M";text-align:center;padding-inline:0}
-  #tabs[data-c="1"] button{justify-content:center;padding-inline:0!important;gap:0!important}
+  :root[data-skin] #tabs[data-c="1"] button{justify-content:center!important;padding-inline:0!important;gap:0!important}
+  #tabs[data-c="1"] button.on{align-items:center!important;margin-inline:0!important}
+  #tabs[data-c="1"] button svg{display:block;flex:none;margin-inline:auto!important}
   #tabs[data-c="1"] .tlb{opacity:0;max-width:0}
   #tabs[data-c="1"] .sbtog svg{transform:rotate(180deg)}
   #tabs[data-c="1"] .sdiv{margin-inline:14px}
@@ -453,4 +469,85 @@ body{transition:background-color .3s ease,color .3s ease}
   .gwrap{grid-template-columns:minmax(0,1fr) 320px;align-items:start}
   .gcvw{height:min(76vh,760px)}
   .gside{max-height:calc(100vh - 150px);overflow:auto;position:sticky;top:0;padding-right:2px}
+}
+
+/* inicio en horizontal: columnas que se rellenan sin huecos entre tarjetas */
+@media (min-width:900px) and (min-height:480px){
+  #view[data-tab="home"]{display:block;column-count:2;column-gap:14px}
+  #view[data-tab="home"]>*{break-inside:avoid;margin-bottom:14px;width:100%}
+  #view[data-tab="home"]>.top,#view[data-tab="home"]>.seg,#view[data-tab="home"]>.bar2,#view[data-tab="home"]>h2,#view[data-tab="home"]>.banner,#view[data-tab="home"]>.quick,#view[data-tab="home"]>.empty,#view[data-tab="home"]>.cal-head,#view[data-tab="home"]>.legend,#view[data-tab="home"]>div:last-child{column-span:all}
+}
+
+/* tutorial de primer uso */
+#tour{position:fixed;inset:0;z-index:70;display:flex;align-items:flex-end;justify-content:center;padding:16px;padding-bottom:max(16px,env(safe-area-inset-bottom));background:rgba(0,0,0,.55)}
+#tour .tbox{width:100%;max-width:440px;display:grid;gap:14px;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:24px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.35);animation:popin .3s var(--ease) both}
+#tour h2{margin:0;font-size:22px;letter-spacing:-.01em}
+#tour p{margin:0;line-height:1.5}
+#tour .tic{width:60px;height:60px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:var(--accent-soft);color:var(--accent)}
+#tour .tdots{display:flex;gap:6px;justify-content:center}
+#tour .tdots i{width:7px;height:7px;border-radius:50%;background:var(--line)}
+#tour .tdots i.on{background:var(--accent);width:20px;border-radius:4px}
+@media (min-width:600px){#tour{align-items:center}}
+
+/* cuenta de Mareas */
+.acct-head{display:flex;align-items:center;gap:16px;width:100%;text-align:left;padding:16px}
+.acct-head .mid{display:grid;gap:3px;min-width:0;flex:1}
+.acct-name{font-size:20px;letter-spacing:-.01em;overflow-wrap:anywhere}
+.acct-edit{font-weight:600;color:var(--accent)}
+.acct-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.acct-tile{display:grid;gap:4px;padding:14px;align-content:start}
+.acct-tile b{font-size:26px;letter-spacing:-.02em}
+
+/* notas y metas: entrada suave, selección de periodos y avance de metas */
+.grade-card{animation:grade-rise .42s cubic-bezier(.2,.75,.25,1) both;transform-origin:50% 8%}
+.grade-card [data-a="termSelect"].on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.grade-average{display:inline-block;min-width:2ch;text-align:right;animation:grade-score .48s cubic-bezier(.18,.8,.25,1) both}
+.grade-goal-bar{overflow:hidden}
+.grade-goal-bar i{transition:width .65s cubic-bezier(.2,.8,.2,1),background-color .3s ease}
+.grade-goal-text{animation:grade-fade .38s ease both;animation-delay:.08s}
+.grade-item{animation:grade-item .32s cubic-bezier(.2,.75,.25,1) both}
+.grade-item:nth-of-type(2){animation-delay:.035s}.grade-item:nth-of-type(3){animation-delay:.07s}.grade-item:nth-of-type(4){animation-delay:.105s}
+.mood-match{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:var(--surface2);animation:grade-item .35s ease both}
+.mood-match-face{flex:none;display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--surface)}
+.football-ball{display:grid;place-items:center;width:38px;height:38px;border-radius:14px;background:var(--accent-soft);color:var(--accent)}
+.football-mood-average{font-size:20px;color:var(--accent);font-variant-numeric:tabular-nums}
+@keyframes grade-rise{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes grade-score{0%{opacity:.35;transform:translateY(5px) scale(.92)}70%{transform:translateY(-1px) scale(1.04)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes grade-fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes grade-item{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.grade-card,.grade-average,.grade-goal-text,.grade-item,.mood-match{animation:none!important}.grade-goal-bar i{transition:none!important}}
+
+
+/* ===== Días libres: se distinguen en calendario, horario y listas ===== */
+.freebar{display:flex;align-items:center;gap:12px;padding:12px 14px}
+.freebar .mid{display:flex;flex-direction:column;gap:2px;min-width:0}
+.freebar .sbadge svg{animation:bob 4.5s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}
+.cell.off::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:repeating-linear-gradient(135deg,transparent 0 5px,color-mix(in srgb,var(--fg) 15%,transparent) 5px 7px)}
+.ygrid button.off{outline:1.5px dashed var(--muted);outline-offset:-1.5px}
+.ygrid button.now.off{outline:2px solid var(--fg)}
+.dot.offdot{background:repeating-linear-gradient(135deg,var(--muted) 0 2px,transparent 2px 4px);box-shadow:inset 0 0 0 1px var(--muted)}
+.offtag{display:block;font-size:9px;font-weight:600;line-height:1.2;color:var(--muted)}
+.wgh>div.off{opacity:.85}
+.wgc.off{background-image:repeating-linear-gradient(135deg,transparent 0 6px,color-mix(in srgb,var(--muted) 18%,transparent) 6px 8px)}
+.dchip.off:not(.on){background-image:repeating-linear-gradient(135deg,transparent 0 5px,color-mix(in srgb,var(--muted) 20%,transparent) 5px 7px)}
+.period-item .alertc{margin-top:2px}
+
+/* ===== Rendimiento: las listas largas del diario no pintan lo que queda fuera de pantalla ===== */
+#tl>.day{content-visibility:auto;contain-intrinsic-size:auto 240px}
+@media (hover:hover){#tabs button:hover{color:var(--fg)}}
+#tabs button svg{transition:transform .28s var(--spring)}
+#tabs button.on svg{transform:translateY(-1px) scale(1.06)}
+.period-item,.freebar{animation:fadeup .38s var(--ease) both}
+@media (prefers-reduced-motion:reduce){.freebar .sbadge svg{animation:none}}
+/* Móvil en horizontal (poco alto): barra lateral compacta de solo iconos, sin comerse la pantalla */
+@media (orientation:landscape) and (max-height:479px){
+  :root[data-skin] #app{max-width:none;flex-direction:row;gap:0;padding-inline:0}
+  :root[data-skin] #app #tabs{order:-1;flex:none;width:calc(60px + env(safe-area-inset-left,0px));height:100%;display:flex;flex-direction:column;justify-content:center;gap:2px;margin:0;padding:6px 4px 6px max(4px,env(safe-area-inset-left,0px));border:0;border-right:1px solid var(--line);border-radius:0;background:var(--bg);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;overflow-y:auto}
+  :root[data-skin] #app #tabs::before{display:none}
+  :root[data-skin] #app #tabs button{flex:none;flex-direction:column;justify-content:center;width:100%;min-height:44px;padding:8px 0;font-size:0;gap:0;border-radius:14px}
+  :root[data-skin] #app #tabs button::after{display:none!important}
+  :root[data-skin] #app #tabs button svg{box-sizing:border-box;width:24px;height:24px;padding:0;background:none;border-radius:0;transform:none}
+  :root[data-skin] #app #tabs button.on{background:var(--accent-soft)}
+  :root[data-skin] #app #view{padding-inline:16px max(16px,env(safe-area-inset-right,0px));padding-block:10px 12px}
 }
