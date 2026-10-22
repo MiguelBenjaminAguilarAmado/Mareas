@@ -135,6 +135,7 @@ Con la nube activada puedes dejar que un asistente de IA compatible con MCP cons
 │  ├─ icons/          iconos de la app (192 y 512 px)
 │  └─ Theme-assets/   imágenes y archivos que necesiten los estilos visuales
 ├─ themes/            CSS de cada estilo (glass, android, opencode, paper)
+├─ i18n/              strings.csv: traducciones (key, es, en, ...)
 ├─ supabase/          schema.sql, mcp.sql, MCP.md y functions/mareas-mcp/index.ts
 └─ dev-tools/         herramientas de desarrollo (no forman parte de la app)
 ```
@@ -144,3 +145,13 @@ Con la nube activada puedes dejar que un asistente de IA compatible con MCP cons
 ## 👤 Autor
 
 Creado por **Miguel Benjamín Aguilar Amado**.
+
+
+## Idiomas (traducir con el CSV)
+
+- Las cadenas del código se piden con `t('clave','texto en español')`. El español vive en el código.
+- `i18n/strings.csv` tiene una fila por clave y una columna por idioma (`key,es,en,ca,eu,gl,fr,de,pt,it`). La fila `lang.name` da el nombre del idioma. Una celda vacía usa el español.
+- Para añadir un idioma, añade una columna con su código (por ejemplo `nl`) y rellénala.
+- En Ajustes → Idioma se puede descargar la plantilla actual, importar un CSV para probarlo sin tocar el código y cambiar de idioma.
+- Para registrar nuevas cadenas en el CSV, envuélvelas en `t()` y vuelve a generarlo (hay un script de extracción en el repositorio de desarrollo).
+- Por ahora solo están traducidos los elementos principales (pestañas, menú Más y títulos de Ajustes); el resto se irá envolviendo en `t()`.

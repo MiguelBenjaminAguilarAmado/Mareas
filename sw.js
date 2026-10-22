@@ -1,5 +1,5 @@
-const V='mareas-v26';
-const FILES=['./','./index.html','./landing.html','./style.css','./themes/glass.css','./themes/android.css','./themes/opencode.css','./themes/paper.css','./manifest.webmanifest','./assets/icons/icon-192.png','./assets/icons/icon-512.png'];
+const V='mareas-v29';
+const FILES=['./','./index.html','./landing.html','./style.css','./patchnotes.md','./themes/glass.css','./themes/android.css','./themes/opencode.css','./themes/paper.css','./manifest.webmanifest','./i18n/strings.csv','./assets/icons/icon-192.png','./assets/icons/icon-512.png'];
 self.addEventListener('install',e=>{
   /* tolerante: un recurso que falle (por ejemplo un icono) no impide instalar el resto */
   e.waitUntil(caches.open(V).then(c=>Promise.all(FILES.map(f=>c.add(f).catch(()=>{})))).then(()=>self.skipWaiting()));
